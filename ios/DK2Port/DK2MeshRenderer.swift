@@ -22,12 +22,14 @@ final class DK2MeshRenderer {
         descriptor.fragmentFunction = fragment
         descriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
 
-        let layout = descriptor.vertexDescriptor.layouts[0]
+        let vertexDescriptor = MTLVertexDescriptor()
+        descriptor.vertexDescriptor = vertexDescriptor
+        let layout = vertexDescriptor.layouts[0]
         layout.stride = 24
-        layout.attributes[0].format = .float4
+        layout.attributes[0].format = MTLVertexFormat.float4
         layout.attributes[0].offset = 0
         layout.attributes[0].bufferIndex = 0
-        layout.attributes[1].format = .float2
+        layout.attributes[1].format = MTLVertexFormat.float2
         layout.attributes[1].offset = 16
         layout.attributes[1].bufferIndex = 0
 
@@ -51,10 +53,11 @@ final class DK2MeshRenderer {
 
     func draw(encoder: MTLRenderCommandEncoder,
               uniforms: DK2Uniforms,
-              creatures: [[String: Any]]) {
+              creatures: [[AnyHashable: Any]]) {
         guard !creatures.isEmpty else { return }
+        var localUniforms = uniforms
         encoder.setRenderPipelineState(pipeline)
-        encoder.setVertexBytes(&uniforms, length: MemoryLayout<DK2Uniforms>.size, index: 0)
+        encoder.setVertexBytes(&localUniforms, length: MemoryLayout<DK2Uniforms>.size, index: 0)
         encoder.setFragmentTexture(atlas, index: 0)
         encoder.setFragmentSamplerState(sampler, index: 0)
 

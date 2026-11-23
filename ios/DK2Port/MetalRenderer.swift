@@ -93,7 +93,7 @@ final class DK2MetalRenderer: NSObject, MTKViewDelegate {
     private var uniforms = DK2Uniforms()
     private let bridge: DK2Bridge
     private var instances: [DK2Instance] = []
-    private var creatureData: [[String: Any]] = []
+    private var creatureData: [[AnyHashable: Any]] = []
     private var particlePipeline: MTLRenderPipelineState?
     private var particleBuffer: MTLBuffer?
     private var particleCount = 0

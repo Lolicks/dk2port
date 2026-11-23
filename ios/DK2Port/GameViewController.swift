@@ -53,7 +53,7 @@ final class DK2GameViewController: UIViewController {
     }
 
     private func load(_ entry: DK2MapEntry) throws {
-        try bridge.loadMapAtPath(DK2AssetLoader.mapURL(entry).path)
+        try bridge.loadMap(atPath: DK2AssetLoader.mapURL(entry).path)
         let world = bridge.snapshot
         let w = world["width"] as? Int ?? 0
         let h = world["height"] as? Int ?? 0
@@ -68,7 +68,7 @@ final class DK2GameViewController: UIViewController {
         if w > 0 && h > 0 {
             let cx = min(w - 1, max(0, w / 2))
             let cy = min(h - 1, max(0, h / 2))
-            _ = bridge.spawnCreature(0, x: cx, y: cy)
+            _ = bridge.spawnCreature(0, x: Int32(cx), y: Int32(cy))
         }
     }
 
@@ -83,7 +83,7 @@ final class DK2GameViewController: UIViewController {
         let snapshot = bridge.snapshot
         audio.updateListener(x: snapshot["centerX"] as? Float ?? 0,
                              y: snapshot["centerY"] as? Float ?? 0)
-        onState?(snapshot)
+        onState?(snapshot as NSDictionary)
     }
 
     private func installGestures(on target: UIView) {
@@ -133,11 +133,11 @@ final class DK2GameViewController: UIViewController {
     }
 
     func saveGame(name: String) {
-        _ = bridge.saveToPath(DK2AssetLoader.saveURL(name: name).path)
+        _ = bridge.save(toPath: DK2AssetLoader.saveURL(name: name).path)
     }
 
     func loadGame(name: String) {
-        _ = bridge.loadFromPath(DK2AssetLoader.saveURL(name: name).path)
+        _ = bridge.load(fromPath: DK2AssetLoader.saveURL(name: name).path)
     }
 }
 

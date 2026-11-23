@@ -26,7 +26,7 @@ enum DK2OriginalAssets {
     }
 
     /// Decode a compressed WAD entry into real KMF bytes.
-    static func kmf(entry: String, in wad: String) -> Data? {
+    static func kmf(entry: String, in wad: String = "Meshes.WAD") -> Data? {
         guard let archive = data("Data/\(wad)"),
               let stored = try? DK2DecoderBridge.wadEntry(entry, from: archive),
               let kmf = try? DK2DecoderBridge.decompressKmsh(stored) else {
