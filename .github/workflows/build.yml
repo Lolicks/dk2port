@@ -25,10 +25,20 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: true
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode.app
+      - name: Stage original resources into app bundle
+        run: |
+          set -euo pipefail
+          mkdir -p ios/DK2Port/Resources/Original
+          cp -R game/Data ios/DK2Port/Resources/Original/Data
+          python3 tools/import_assets.py --game-root game \
+            --out ios/DK2Port/Resources/Assets --skip-audio
+          du -sh ios/DK2Port/Resources
       - name: Generate Xcode project
         working-directory: ios
         run: xcodegen generate --spec project.yml

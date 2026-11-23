@@ -90,13 +90,7 @@ enum DK2AssetLoader {
         if let bundled = Bundle.main.url(forResource: "Assets", withExtension: nil) {
             return bundled
         }
-        let documents = FileManager.default.urls(for: .documentDirectory,
-                                                 in: .userDomainMask)[0]
-            .appendingPathComponent("Assets")
-        if FileManager.default.fileExists(atPath: documents.path) {
-            return documents
-        }
-        return Bundle.main.bundleURL.appendingPathComponent("Assets")
+        return Bundle.main.bundleURL.appendingPathComponent("Resources/Assets")
     }()
 
     static func load<T: Decodable>(_ type: T.Type, _ relative: String) -> T? {

@@ -30,6 +30,7 @@ targets:
       - path: ../decoder/audio
     resources:
       - path: DK2Port/Assets
+      - path: DK2Port/Resources
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.dk2port.ios
       PRODUCT_NAME: DK2Port

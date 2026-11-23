@@ -9,8 +9,10 @@ import Foundation
 /// Nothing is copied into the app bundle.
 enum DK2OriginalAssets {
     static var root: URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Original")
+        if let bundled = Bundle.main.url(forResource: "Original", withExtension: nil) {
+            return bundled
+        }
+        return Bundle.main.bundleURL.appendingPathComponent("Resources/Original")
     }
 
     static func data(_ relative: String) -> Data? {

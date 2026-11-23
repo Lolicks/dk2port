@@ -25,7 +25,7 @@ final class DK2AudioController {
     }
 
     func configure(worldWidth: Int, height: Int) {
-        worldSize = Float(max(width: worldWidth, height: height))
+        worldSize = Float(Swift.max(worldWidth, height))
     }
 
     func updateListener(x: Float, y: Float) {
@@ -66,10 +66,10 @@ final class DK2AudioController {
         guard let player = players[key], let buffer = buffers[key] else { return }
         let dx = x - listenerX, dy = y - listenerY
         let distance = sqrtf(dx * dx + dy * dy)
-        let gain = volume / (1.0f + distance / max(4.0f, worldSize * 0.15f))
+        let gain = volume / (1.0 + distance / Swift.max(4.0, worldSize * 0.15))
         let node = mixer[key]
         node?.volume = min(1.0, max(0.0, gain))
-        node?.pan = min(1.0, max(-1.0, dx / max(4.0f, worldSize * 0.15f)))
+        node?.pan = min(1.0, Swift.max(-1.0, dx / Swift.max(4.0, worldSize * 0.15)))
         player.scheduleBuffer(buffer, at: nil, options: [], completionHandler: nil)
         if !player.isPlaying { player.play() }
     }
@@ -77,6 +77,4 @@ final class DK2AudioController {
     func stopAll() {
         for player in players.values { player.stop() }
     }
-
-    private func max(width: Int, height: Int) -> Int { Swift.max(width, height) }
 }
