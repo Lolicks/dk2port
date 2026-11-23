@@ -81,6 +81,21 @@ struct DK2AudioIndex: Decodable {
     let files: [AudioFile]
 }
 
+/// Schema written by tools/build_audio.py -> Assets/audio/manifest.json
+struct DK2AudioManifest: Decodable {
+    struct Entry: Decodable {
+        let id: String
+        let bank: String
+        let index: Int
+        let name: String
+        let codec: String
+        let path: String?
+        let critical: Bool
+    }
+    let version: Int
+    let entries: [Entry]
+}
+
 enum DK2AssetLoader {
     static let root: URL = {
         if let explicit = ProcessInfo.processInfo.environment["DK2_ASSET_ROOT"],

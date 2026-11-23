@@ -61,11 +61,16 @@ final class DK2GameViewController: UIViewController {
         let h = world["height"] as? Int ?? 0
         audio.configure(worldWidth: w, height: h)
         audio.start()
-        if let manifest = DK2AssetLoader.load(DK2AudioIndex.self, "audio/audio.json") {
-            for entry in manifest.files.prefix(6) {
-                guard let path = entry.wav, !path.isEmpty else { continue }
-                audio.preload(relativePath: path, key: entry.name)
+        var firstAudioKey: String?
+        if let manifest = DK2AssetLoader.load(DK2AudioManifest.self, "audio/manifest.json") {
+            for entry in manifest.entries.prefix(64) {
+                guard let path = entry.path, !path.isEmpty else { continue }
+                audio.preload(relativePath: path, key: entry.id)
+                if firstAudioKey == nil { firstAudioKey = entry.id }
             }
+        }
+        if let key = firstAudioKey {
+            audio.play(key: key, atX: 0, y: 0, volume: 0.35)
         }
         if w > 0 && h > 0 {
             let cx = min(w - 1, max(0, w / 2))

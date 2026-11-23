@@ -1,7 +1,7 @@
 # DK2Port — STATUS (auto-generated)
 
 **Updated:** 2026-11-24  
-**Verdict:** Full port in progress: exactness RE + systems; IPA builds gated until completion.
+**Verdict:** PREVIEW BUILD: current code compiled into IPA for user testing. Full exact 1:1 port NOT complete.
 
 ## Build & distribution
 

@@ -2,7 +2,7 @@
   "project": "Dungeon Keeper II — native iOS port",
   "repository": "https://github.com/Lolicks/dk2port",
   "updated": "2026-11-24",
-  "verdict": "Full port in progress: exactness RE + systems; IPA builds gated until completion.",
+  "verdict": "PREVIEW BUILD: current code compiled into IPA for user testing. Full exact 1:1 port NOT complete.",
   "build": {
     "last_successful_run": "https://github.com/Lolicks/dk2port/actions/runs/45244837079",
     "ipa_size_bytes": 492544759,
