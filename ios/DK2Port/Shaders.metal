@@ -25,7 +25,7 @@ struct VertexOut {
     float4 effect;
 };
 
-static const float2 quad[6] = {
+constant float2 quad[6] = {
     float2(-0.5f, -0.5f), float2(0.5f, -0.5f), float2(0.5f, 0.5f),
     float2(-0.5f, -0.5f), float2(0.5f, 0.5f), float2(-0.5f, 0.5f),
 };
@@ -36,7 +36,6 @@ vertex VertexOut instance_vertex(
     constant Uniforms &u [[buffer(0)]],
     device const Instance *instances [[buffer(1)]]) {
     Instance inst = instances[iid];
-    out.effect = inst.effect;
     float2 local = quad[vid];
     float2 p = inst.worldSize.xy + local * inst.worldSize.zw - u.center;
     p *= u.zoom;
@@ -45,6 +44,7 @@ vertex VertexOut instance_vertex(
     float2 ndc = float2(p.x / (u.aspect * 13.0f), p.y / 13.0f);
 
     VertexOut out;
+    out.effect = inst.effect;
     out.position = float4(ndc, 0.0f, 1.0f);
     uint cell = (uint)inst.tintIndex.a;
     float2 cellXY = float2(float(cell % 8u), float(cell / 8u));
