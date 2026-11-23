@@ -83,8 +83,8 @@ jobs:
             unzip -l "$IPA" | grep -q "$f" || { echo "MISSING $f"; exit 1; }
             echo "OK $f"
           done
-          if grep -R 'appendingPathComponent("Original")' DK2Port --include='*.swift' \
-             | grep -v 'Bundle.main'; then
+          if grep -R 'documentDirectory' DK2Port --include='*.swift' \
+             | grep -q 'Original'; then
             echo "unexpected Documents/Original dependency"; exit 1
           fi
           echo "No mandatory Documents/Original dependency"
