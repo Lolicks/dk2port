@@ -1,0 +1,182 @@
+{
+  "generator": "port/tools/wad_tool.py list --json",
+  "wads": {
+    "EngineTextures.WAD": {
+      "file": "Data/EngineTextures.WAD",
+      "file_size": 2208282,
+      "magic": "DWFB",
+      "version": 2,
+      "entry_count": 102,
+      "name_pool_offset": 2206863,
+      "name_pool_size": 1419,
+      "data_start": 4168,
+      "type_guesses": {
+        "png": 102
+      },
+      "flags": {
+        "0": 102
+      },
+      "warnings": [],
+      "example_entries": [
+        {
+          "index": 0,
+          "name": "MapRock.png",
+          "type": "png"
+        },
+        {
+          "index": 1,
+          "name": "MapBack.PNG",
+          "type": "png"
+        },
+        {
+          "index": 2,
+          "name": "GUI\\Creatures\\more_creatures.png",
+          "type": "png"
+        }
+      ]
+    },
+    "FrontEnd.WAD": {
+      "file": "Data/FrontEnd.WAD",
+      "file_size": 22599650,
+      "magic": "DWFB",
+      "version": 2,
+      "entry_count": 445,
+      "name_pool_offset": 22591731,
+      "name_pool_size": 7919,
+      "data_start": 17888,
+      "type_guesses": {
+        "png": 371,
+        "gif": 1,
+        "psd": 1,
+        "data (444)": 29,
+        "bmp": 42,
+        "data": 1
+      },
+      "flags": {
+        "0": 445
+      },
+      "warnings": [],
+      "example_entries": [
+        {
+          "index": 0,
+          "name": "V-Up_Arrow.png",
+          "type": "png"
+        },
+        {
+          "index": 1,
+          "name": "V-Scroll_Bar_BG.png",
+          "type": "png"
+        },
+        {
+          "index": 2,
+          "name": "V-Scroll_Bar.png",
+          "type": "png"
+        }
+      ]
+    },
+    "Meshes.WAD": {
+      "file": "Data/Meshes.WAD",
+      "file_size": 32026721,
+      "magic": "DWFB",
+      "version": 2,
+      "entry_count": 2015,
+      "name_pool_offset": 31990798,
+      "name_pool_size": 35923,
+      "data_start": 80688,
+      "type_guesses": {
+        "kmf (compressed KMSH)": 2015
+      },
+      "flags": {
+        "4": 2015
+      },
+      "warnings": [],
+      "example_entries": [
+        {
+          "index": 0,
+          "name": "g_Maiden-Torture.kmf",
+          "type": "kmf (compressed KMSH)"
+        },
+        {
+          "index": 1,
+          "name": "G_Maiden-electrocute.kmf",
+          "type": "kmf (compressed KMSH)"
+        },
+        {
+          "index": 2,
+          "name": "g_Maiden-elec.kmf",
+          "type": "kmf (compressed KMSH)"
+        }
+      ]
+    },
+    "Paths.WAD": {
+      "file": "Data/Paths.WAD",
+      "file_size": 1933348,
+      "magic": "DWFB",
+      "version": 2,
+      "entry_count": 81,
+      "name_pool_offset": 1931905,
+      "name_pool_size": 1443,
+      "data_start": 3328,
+      "type_guesses": {
+        "kcs (path data)": 80,
+        "text": 1
+      },
+      "flags": {
+        "0": 81
+      },
+      "warnings": [],
+      "example_entries": [
+        {
+          "index": 0,
+          "name": "EnginePath67.KCS",
+          "type": "kcs (path data)"
+        },
+        {
+          "index": 1,
+          "name": "EnginePath66.KCS",
+          "type": "kcs (path data)"
+        },
+        {
+          "index": 2,
+          "name": "EnginePath65.KCS",
+          "type": "kcs (path data)"
+        }
+      ]
+    },
+    "Sprite.WAD": {
+      "file": "Data/Sprite.WAD",
+      "file_size": 818184,
+      "magic": "DWFB",
+      "version": 2,
+      "entry_count": 24,
+      "name_pool_offset": 817822,
+      "name_pool_size": 362,
+      "data_start": 1048,
+      "type_guesses": {
+        "spr (PSFB sprite atlas)": 9,
+        "png": 15
+      },
+      "flags": {
+        "0": 24
+      },
+      "warnings": [],
+      "example_entries": [
+        {
+          "index": 0,
+          "name": "TrapIcons.spr",
+          "type": "spr (PSFB sprite atlas)"
+        },
+        {
+          "index": 1,
+          "name": "SpellPossessNoGo.png",
+          "type": "png"
+        },
+        {
+          "index": 2,
+          "name": "SpellPossess.png",
+          "type": "png"
+        }
+      ]
+    }
+  }
+}

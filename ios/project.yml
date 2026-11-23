@@ -1,0 +1,46 @@
+name: DK2Port
+options:
+  deploymentTarget:
+    iOS: "15.0"
+  groupSortPosition: top
+  createIntermediateGroups: true
+
+targets:
+  DK2Port:
+    type: application
+    platform: iOS
+    sources:
+      - path: DK2Port
+        excludes:
+          - "DK2-Bridging-Header.h"
+      - path: ../../engine/DK2.cpp
+      - path: ../../engine/DK2.h
+      - path: ../../engine/GridSimulation.cpp
+      - path: ../../engine/GridSimulation.h
+      - path: ../../engine/Balance.generated.hpp
+      - path: ../../engine/CreatureStats.generated.hpp
+      - path: ../../engine/MissionRules.generated.hpp
+      - path: ../../engine/SpellData.generated.hpp
+      - path: ../../decoder/core
+      - path: ../../decoder/wad
+      - path: ../../decoder/kmsh
+      - path: ../../decoder/kmf
+      - path: ../../decoder/tgq
+      - path: ../../decoder/tqi
+      - path: ../../decoder/audio
+    resources:
+      - path: DK2Port/Assets
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.dk2port.ios
+      PRODUCT_NAME: DK2Port
+      SWIFT_VERSION: "5.0"
+      CLANG_CXX_LANGUAGE_STANDARD: "c++17"
+      CLANG_CXX_LIBRARY: "libc++"
+      SWIFT_OBJC_BRIDGING_HEADER: "DK2Port/DK2-Bridging-Header.h"
+      HEADER_SEARCH_PATHS:
+        - "$(SRCROOT)/../../engine"
+      IPHONEOS_DEPLOYMENT_TARGET: "15.0"
+      TARGETED_DEVICE_FAMILY: "1,2"
+      CODE_SIGN_STYLE: Automatic
+      DEVELOPMENT_TEAM: ""
+      INFOPLIST_FILE: DK2Port/Info.plist

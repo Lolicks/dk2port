@@ -1,0 +1,172 @@
+{
+  "source": [
+    "manual.pdf",
+    "reference_card.pdf"
+  ],
+  "note": "Values quoted from the shipped documentation. null = not documented.",
+  "room_costs": {
+    "Dungeon Heart": null,
+    "Treasury": 200,
+    "Lair": 300,
+    "Hatchery": 300,
+    "Training Room": 500,
+    "Combat Pit": 750,
+    "Temple": 750,
+    "Workshop": 600,
+    "Casino": 2000,
+    "Graveyard": 2000,
+    "Portal": 750,
+    "Torture Chamber": 1500,
+    "Prison": 750,
+    "Library": 1500,
+    "Guard Room": 600,
+    "Wooden Bridge": 200,
+    "Stone Bridge": 500
+  },
+  "creature_requirements": [
+    {
+      "name": "Imp",
+      "rooms": [
+        "Dungeon Heart"
+      ],
+      "spells": []
+    },
+    {
+      "name": "Firefly",
+      "rooms": [
+        "Lair"
+      ],
+      "spells": [
+        "Whirlpool"
+      ]
+    },
+    {
+      "name": "Goblin",
+      "rooms": [
+        "Lair"
+      ],
+      "spells": []
+    },
+    {
+      "name": "Warlock",
+      "rooms": [
+        "Lair",
+        "Library"
+      ],
+      "spells": [
+        "Fireball",
+        "Heal Creature",
+        "Firebomb"
+      ]
+    },
+    {
+      "name": "Salamander",
+      "rooms": [
+        "Lair",
+        "Training Room"
+      ],
+      "spells": [
+        "Spit",
+        "Fireball"
+      ]
+    },
+    {
+      "name": "Rogue",
+      "rooms": [
+        "Lair",
+        "Treasury",
+        "Casino"
+      ],
+      "spells": [
+        "Invisible"
+      ]
+    },
+    {
+      "name": "Troll",
+      "rooms": [
+        "Lair",
+        "Workshop"
+      ],
+      "spells": []
+    },
+    {
+      "name": "Bile Demon",
+      "rooms": [
+        "Lair",
+        "Workshop",
+        "Hatchery(5x5)"
+      ],
+      "spells": [
+        "Gas Cloud",
+        "Gas Missile"
+      ]
+    },
+    {
+      "name": "Dark Elf",
+      "rooms": [
+        "Lair",
+        "Guard Room"
+      ],
+      "spells": [
+        "Arrow",
+        "Knives",
+        "Guided Bolt"
+      ]
+    },
+    {
+      "name": "Skeleton",
+      "rooms": [
+        "Prison*"
+      ],
+      "spells": []
+    },
+    {
+      "name": "Mistress",
+      "rooms": [
+        "Lair",
+        "Torture Chamber"
+      ],
+      "spells": [
+        "Lightning",
+        "Freeze",
+        "Hailstorm"
+      ]
+    },
+    {
+      "name": "Vampire",
+      "rooms": [
+        "Graveyard**"
+      ],
+      "spells": [
+        "Slow",
+        "Drain",
+        "Raise Dead"
+      ]
+    },
+    {
+      "name": "Black Knight",
+      "rooms": [
+        "Lair",
+        "Combat Pit"
+      ],
+      "spells": []
+    },
+    {
+      "name": "Dark Angel",
+      "rooms": [
+        "Lair",
+        "Temple"
+      ],
+      "spells": [
+        "Disruption",
+        "Hail Storm",
+        "Skeleton Army"
+      ]
+    }
+  ],
+  "creature_spell_notes": {
+    "Imp": "Haste Self, Teleport (card column preceding Imp)",
+    "*": "requires death of a prisoner",
+    "**": "requires bodies to rise from the dead"
+  }
+}

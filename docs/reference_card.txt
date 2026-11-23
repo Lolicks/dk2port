@@ -1,0 +1,223 @@
+KEY                                              FUNCTION
+POSSESSED (1ST PERSON MODE)
+  Insert ..............................................Toggle Sniper Mode
+  NUM 0 .............................................Pick Lock/Disarm/Jailbreak
+  SPACE..............................................Fire
+  CTRL ................................................Creep
+  SHIFT...............................................Run
+  1 .....................................................Possessed Melee Select
+  2 .....................................................Possessed Spell Select 1
+  3 .....................................................Possessed Spell Select 2
+  4 .....................................................Possessed Spell Select 3
+  5 .....................................................Possessed Primary Ability
+  6 .....................................................Possessed Secondary Ability
+  7 .....................................................Possessed Group Select
+  CTRL + G .........................................Remove From Group
+
+DUNGEON VIEW MODE
+  UP ..................................................Scroll Up
+  DOWN .............................................Scroll Down
+  LEFT ...............................................Scroll Left
+  RIGHT .............................................Scroll Right
+  CTRL+LEFT/RIGHT ............................Rotate Key
+  SHIFT +UP/DOWN/LEFT/RIGHT ..........Speed Scroll Key
+  DELETE ...........................................Rotate View Left
+  PG DN .............................................Rotate View Right
+  ESC ................................................Pause + Options
+  PRT SC ............................................Take Screen Shot
+  TAB .................................................Send Multiplayer messages
+  = ....................................................Increase Ambient Light
+  -  ....................................................Decrease Ambient Light
+  F1 ...................................................Camera Isometric
+  F2 ...................................................Camera Top Down
+  F3 ...................................................Camera Oblique
+  F4 ...................................................User Camera 1
+  F5 ...................................................User Camera 2
+  F6 ...................................................User Camera 3
+  A ....................................................Ally Window
+  F .....................................................Zoom to next fight
+  G ....................................................Toggle GUI
+  H ....................................................Zoom To Dungeon Heart
+  I  ....................................................Toggle Player Information
+  M ....................................................Map
+  P ....................................................Zoom To Portal
+  X + Mouse LEFT/RIGHT ......................Camera Mouse Rotate
+  Z + Mouse UP/DOWN .........................Camera Mouse Zoom
+  SHIFT + . ........................................Increase Gamma
+  SHIFT + , ........................................Decrease Gamma
+  CTRL +.+ Click on
+               Creature Portrait .............Pick High Level Creature
+  CTRL +,+ Click on
+               Creature Portrait .............Pick Low Level Creature
+  CTRL + L ........................................Quick Load
+  CTRL + R ........................................Restart Level
+  CTRL + S ........................................Quick Save                          HOTKEYS
+              MAIN INTERFACE
+                                                                 OBJECTIVE       DOORS/TRAPS PANEL
+                                                   CREATURE MESSAGE                 KEEPER SPELLS PANEL
+                                                         INFORMATION                          ZOOM IN/OUT
+                                             DUNGEON HEART INFO
+                SUMMON HORNY/
+                HORNY TALISMAN                                                                              OPTIONS
+                                                                                                            MINI MAP
+                      CANCEL CALL                                                                           QUERY
+                      TO ARMS                                                                               CREATURE PANEL
+              FIGHT NOTIFICATION                                                                                      SELL
+                    ALARM TRAP                                                                              ROOMS PANEL
+                    NOTIFICATION
+                                                                                                            CHANGE GUI SIZE
+                                IMPS
+                                                                                                            MANA LOSS PER TURN
+                 DUNGEON HEART                                                                              MANA GAINS PER TURN
+               OBJECTIVE POINTER                                                                            DUNGEON HEART
+                                                                                                                SHORT CUT
+                INFORMATION BAR
+                                                                                                            AMOUNT OF MANA
+                                                                                                            AMOUNT OF GOLD
+               KEY                                              FUNCTION
+               POSSESSED (1ST PERSON MODE)
+                 Insert ..............................................Toggle Sniper Mode
+                 NUM 0 .............................................Pick Lock/Disarm/Jailbreak
+                 SPACE..............................................Fire
+                 CTRL ................................................Creep
+                 SHIFT...............................................Run
+                 1 .....................................................Possessed Melee Select
+                 2 .....................................................Possessed Spell Select 1
+                 3 .....................................................Possessed Spell Select 2
+                 4 .....................................................Possessed Spell Select 3
+                 5 .....................................................Possessed Primary Ability
+                 6 .....................................................Possessed Secondary Ability
+                 7 .....................................................Possessed Group Select
+                 CTRL + G .........................................Remove From Group
+               DUNGEON VIEW MODE
+                 UP ..................................................Scroll Up
+                 DOWN .............................................Scroll Down
+                 LEFT ...............................................Scroll Left
+                 RIGHT .............................................Scroll Right
+                 CTRL+LEFT/RIGHT ............................Rotate Key
+                 SHIFT +UP/DOWN/LEFT/RIGHT ..........Speed Scroll Key
+                 DELETE ...........................................Rotate View Left
+                 PG DN .............................................Rotate View Right
+                 ESC ................................................Pause + Options
+                 PRT SC ............................................Take Screen Shot
+                 TAB .................................................Send Multiplayer messages
+                 = ....................................................Increase Ambient Light
+                 -  ....................................................Decrease Ambient Light
+                 F1 ...................................................Camera Isometric
+                 F2 ...................................................Camera Top Down
+Page 2
+                 F3 ...................................................Camera Oblique
+                 F4 ...................................................User Camera 1
+                 F5 ...................................................User Camera 2
+                 F6 ...................................................User Camera 3
+                 A ....................................................Ally Window
+                 F .....................................................Zoom to next fight
+5:18 pm          G ....................................................Toggle GUI
+                 H ....................................................Zoom To Dungeon Heart
+                 I  ....................................................Toggle Player Information
+                 M ....................................................Map
+                 P ....................................................Zoom To Portal
+                 X + Mouse LEFT/RIGHT ......................Camera Mouse Rotate
+                 Z + Mouse UP/DOWN .........................Camera Mouse Zoom
+                 SHIFT + . ........................................Increase Gamma
+25/6/99
+                 SHIFT + , ........................................Decrease Gamma
+                 CTRL +.+ Click on
+                              Creature Portrait .............Pick High Level Creature
+                 CTRL +,+ Click on
+                              Creature Portrait .............Pick Low Level Creature
+                 CTRL + L ........................................Quick Load
+                 CTRL + R ........................................Restart Level
+DK2 Keycard      CTRL + S ........................................Quick Save                                  HOTKEYS
+              ROOM                              CREATURE              CREATURE SPELLS
+                                                                                    Haste Self
+                                                                                    Teleport
+              DUNGEON HEART                      IMP
+
+
+                                                                                    FIREFLY:
+                                                                                    WHIRLPOOL
+
+              LAIR                               GOBLIN + FIREFLY
+
+                                                                                   FIREBALL
+                                                                                   HEAL CREATURE
+                                                                                   FIREBOMB
+
+              LAIR + LIBRARY                     WARLOCK
+
+                                                                                    SPIT
+                                                                                    FIREBALL
+
+              LAIR + TRAINING ROOM               SALAMANDER
+
+
+                                                                                    INVISIBLE
+
+
+              LAIR + TREASURY + CASINO           ROGUE
+
+
+                                                                                    NONE
+
+              LAIR + WORKSHOP                    TROLL
+
+                                                                                    GAS CLOUD
+                                                                                    GAS MISSILE
+
+              LAIR + WORKSHOP + HATCHERY(5X5)    BILE DEMON
+
+                                                                                    ARROW
+                                                                                    KNIVES
+                                                                                    GUIDED BOLT
+
+              LAIR + GUARDROOM                   DARK ELF
+
+
+                                                                                    NONE
+
+
+              PRISON*                            SKELETON
+
+                                                                                    LIGHTNING
+                                                                                    FREEZE
+                                                                                    HAILSTORM
+              LAIR + TORTURE CHAMBER             MISTRESS
+
+                                                                                    SLOW
+                                                                                    DRAIN
+                                                                                    RAISE DEAD
+
+              GRAVEYARD**                        VAMPIRE
+
+
+
+
+Page 4
+                                                                                    NONE
+
+
+              LAIR + COMBAT PIT                  BLACK KNIGHT
+
+
+
+5:18 pm
+                                                                                   DISRUPTION
+                                                                                   HAIL STORM
+                                                                                   SKELETON ARMY
+
+              LAIR + TEMPLE                      DARK ANGEL
+
+
+25/6/99
+              * REQUIRES DEATH OF A PRISONER ** REQUIRES BODIES TO RISE FROM THE DEAD
+
+
+
+
+DK2 Keycard
+                               WWW.DUNGEONKEEPER.COM
+
+
+                                         *BFE08801508K*
+

@@ -1,0 +1,224 @@
+openjdk version "25.0.5" 2026-10-20
+OpenJDK Runtime Environment (build 25.0.5+8-1-Debian)
+OpenJDK 64-Bit Server VM (build 25.0.5+8-1-Debian, mixed mode)
+INFO  Using log config file: jar:file:/home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Framework/Generic/lib/Generic.jar!/generic.log4j.xml (LoggingInitialization)  
+INFO  Using log file: /home/kali/.config/ghidra/ghidra_12.2_PUBLIC/application.log (LoggingInitialization)  
+INFO  Loading user preferences: /home/kali/.config/ghidra/ghidra_12.2_PUBLIC/preferences (Preferences)  
+INFO  Searching for classes... (ClassSearcher)  
+INFO  Class search complete (4836 ms) (ClassSearcher)  
+INFO  Initializing SSL Context (DefaultSSLContextInitializer)  
+INFO  Initializing Random Number Generator... (SecureRandomFactory)  
+INFO  Random Number Generator initialization complete: NativePRNGNonBlocking (SecureRandomFactory)  
+INFO  Loaded 121 trusted CA certificate(s) from /etc/ssl/certs/ca-certificates.crt (UnixSystemTrustKeyStoreUtil)  
+INFO  Loaded 121 trusted CA certificates from the OS trust store. (DefaultTrustManagerFactory)  
+INFO  Loaded 121 trusted CA certificates from the Java default trust store. (DefaultTrustManagerFactory)  
+INFO  Headless startup complete (17213 ms) (AnalyzeHeadless)  
+INFO  Class searcher loaded 60 extension points (19 false positives) (ClassSearcher)  
+INFO  HEADLESS Script Paths:
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/Decompiler/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/FunctionID/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/PDB/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/DecompilerDependent/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/VersionTracking/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Debug/Debugger-rmi-trace/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/Base/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/WildcardAssembler/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/SystemEmulation/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Processors/DATA/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Processors/PIC/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Processors/JVM/ghidra_scripts
+    /home/kali/Desktop/rea/Dungeon Keeper 2/port/re
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/Swift/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Processors/8051/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Processors/Atmel/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/GnuDemangler/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Debug/Debugger/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/FileFormats/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/PyGhidra/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/BytePatterns/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/MicrosoftCodeAnalyzer/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/BSim/ghidra_scripts (HeadlessAnalyzer)  
+INFO  HEADLESS: execution starts (HeadlessAnalyzer)  
+INFO  Creating project: /home/kali/ghidra-dk2-project/dk2 (HeadlessAnalyzer)  
+INFO  Creating project: /home/kali/ghidra-dk2-project/dk2 (DefaultProject)  
+INFO  REPORT: Processing input files:  (HeadlessAnalyzer)  
+INFO       project: /home/kali/ghidra-dk2-project/dk2 (HeadlessAnalyzer)  
+INFO  IMPORTING: file:///home/kali/Desktop/rea/Dungeon Keeper 2/DKII.EXE (HeadlessAnalyzer)  
+INFO  Using Loader: Portable Executable (PE) (ProgramLoader)  
+INFO  Using Language/Compiler: x86:LE:32:default:windows (ProgramLoader)  
+INFO  Using Library Search Path: [., /bin, /lib, /lib64, /lib/x86_64-linux-gnu, /lib/aarch64-linux-gnu, /usr/bin, /usr/lib, /usr/X11R6/bin, /usr/X11R6/lib, /usr/java/packages/lib, /usr/lib/x86_64-linux-gnu/jni, /usr/lib/x86_64-linux-gnu, /usr/lib/jni] (ProgramLoader)  
+INFO  Additional info:
+Loading file:///home/kali/Desktop/rea/Dungeon Keeper 2/DKII.EXE?MD5=3010c4324614e8503d314b196fb821c5...
+------------------------------------------------
+
+Searching 9 paths for library ADVAPI32.DLL...
+Library not found.
+------------------------------------------------
+
+Searching 9 paths for library DDRAW.DLL...
+Library not found.
+------------------------------------------------
+
+Searching 9 paths for library DINPUT.DLL...
+Library not found.
+------------------------------------------------
+
+Searching 9 paths for library DSOUND.DLL...
+Library not found.
+------------------------------------------------
+
+Searching 9 paths for library GDI32.DLL...
+Library not found.
+------------------------------------------------
+
+Searching 9 paths for library IMM32.DLL...
+Library not found.
+------------------------------------------------
+
+Searching 9 paths for library KERNEL32.DLL...
+Library not found.
+------------------------------------------------
+
+Searching 9 paths for library OLE32.DLL...
+Library not found.
+------------------------------------------------
+
+Searching 9 paths for library QMIXER.DLL...
+Loading file:///home/kali/Desktop/rea/Dungeon Keeper 2/QMIXER.DLL?MD5=2b5223607a0d7e338024faf855cbb348...
+Created exports file: /home/kali/.config/ghidra/ghidra_12.2_PUBLIC/symbols/win32/qmixer.exports
+Library not saved to project.
+------------------------------------------------
+
+Searching 9 paths for library USER32.DLL...
+Library not found.
+------------------------------------------------
+
+Searching 9 paths for library WEANETR.DLL...
+Loading file:///home/kali/Desktop/rea/Dungeon Keeper 2/WEANETR.dll?MD5=e9cb03d815246cffd378ce1d21dd4476...
+Created exports file: /home/kali/.config/ghidra/ghidra_12.2_PUBLIC/symbols/win32/weanetr.exports
+Library not saved to project.
+------------------------------------------------
+
+Searching 9 paths for library WINMM.DLL...
+Library not found.
+------------------------------------------------
+
+Searching 9 paths for library WSOCK32.DLL...
+Library not found.
+------------------------------------------------
+
+Applying cached symbols from WEANETR.DLL
+Applying cached symbols from QMIXER.DLL
+Linking the External Programs of 'DKII.EXE' to imported libraries...
+  [WEANETR.DLL] -> not found in project
+  [KERNEL32.DLL] -> not found in project
+  [USER32.DLL] -> not found in project
+  [ADVAPI32.DLL] -> not found in project
+  [OLE32.DLL] -> not found in project
+  [DDRAW.DLL] -> not found in project
+  [WINMM.DLL] -> not found in project
+  [QMIXER.DLL] -> not found in project
+  [IMM32.DLL] -> not found in project
+  [WSOCK32.DLL] -> not found in project
+  [DSOUND.DLL] -> not found in project
+  [GDI32.DLL] -> not found in project
+  [DINPUT.DLL] -> not found in project
+------------------------------------------------
+
+ (ProgramLoader)  
+INFO  IMPORTING: Loaded 0 additional files (HeadlessAnalyzer)  
+INFO  ANALYZING all memory and code: file:///home/kali/Desktop/rea/Dungeon Keeper 2/DKII.EXE (HeadlessAnalyzer)  
+WARN  Ignoring leading '_' chars on no-return name '___raise_securityfailure' specified in file: /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/Base/data/PEFunctionsThatDoNotReturn (NoReturnFunctionAnalyzer)  
+WARN  Ignoring leading '_' chars on no-return name '___report_rangecheckfailure' specified in file: /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/Base/data/PEFunctionsThatDoNotReturn (NoReturnFunctionAnalyzer)  
+INFO  Unable to find DWARF information, skipping DWARF analysis (DWARFAnalyzer)  
+INFO  Skipping PDB processing: missing PDB information in program metadata (PdbUniversalAnalyzer)  
+INFO  Packed database cache: /home/kali/.cache/ghidra/packed-db-cache (PackedDatabaseCache)  
+ERROR Invalid PNG data at 006c40f8 (PngDataType)  
+WARN  Decompiling 004edfc0, pcode error at 90909090: Could not follow disassembly flow into non-existing memory at 90909090 (DecompileCallback)  
+WARN  Decompiling 005b9270: Unable to read bytes at ram:04040400 (DecompileCallback)  
+INFO  Applied data type archive: windows_vs12_32 (ApplyDataArchiveAnalyzer)  
+INFO  Applied data type archive: windows_vs12_32 (ApplyDataArchiveAnalyzer)  
+INFO  No functions detected that make variadic function calls with format strings containing format specifiers (FormatStringAnalyzer)  
+INFO  -----------------------------------------------------
+    ASCII Strings                              3.615 secs
+    Apply Data Archives                        2.736 secs
+    Call Convention ID                         0.004 secs
+    Call-Fixup Installer                       1.156 secs
+    Create Address Tables                      5.029 secs
+    Create Address Tables - One Time          33.481 secs
+    Create Function                           27.409 secs
+    DWARF                                      0.013 secs
+    Data Reference                            18.971 secs
+    Decompiler Switch Analysis               144.895 secs
+    Demangler Microsoft                        1.769 secs
+    Disassemble                               48.721 secs
+    Disassemble Entry Points                   4.717 secs
+    Embedded Media                             0.513 secs
+    External Entry References                  0.002 secs
+    Function ID                               44.252 secs
+    Function Start Pre Search                  0.283 secs
+    Function Start Search                      4.360 secs
+    Function Start Search After Code           1.495 secs
+    Function Start Search After Data           1.505 secs
+    Function Start Search delayed - One Time   0.142 secs
+    Non-Returning Functions - Discovered      13.895 secs
+    Non-Returning Functions - Known            0.023 secs
+    PDB Universal                              0.008 secs
+    Reference                                 19.919 secs
+    Scalar Operand References                 30.700 secs
+    Shared Return Calls                        9.442 secs
+    Source Language Support                    0.018 secs
+    Stack                                    110.783 secs
+    Subroutine References                     31.933 secs
+    Subroutine References - One Time           0.086 secs
+    Variadic Function Signature Override       1.355 secs
+    Windows x86 PE Exception Handling         38.975 secs
+    Windows x86 PE RTTI Analyzer               7.463 secs
+    Windows x86 Thread Environment Block (TEB) Analyzer     0.130 secs
+    WindowsResourceReference                  35.629 secs
+    X86 Function Callee Purge                 14.259 secs
+    x86 Constant Reference Analyzer          149.558 secs
+-----------------------------------------------------
+     Total Time   809 secs
+-----------------------------------------------------
+ (AutoAnalysisManager)  
+INFO  REPORT: Analysis succeeded for file: file:///home/kali/Desktop/rea/Dungeon Keeper 2/DKII.EXE (HeadlessAnalyzer)  
+INFO  REPORT: Execute script: GhidraExportScript.java  (HeadlessAnalyzer)  
+ERROR GhidraExportScript.java:101: error: incompatible types: ghidra.program.model.symbol.ReferenceIterator cannot be converted to ghidra.program.model.symbol.Reference[]
+            Reference[] to = rm.getReferencesTo(entry);
+                                               ^
+GhidraExportScript.java:102: error: cannot find symbol
+            for (Reference r : to) if (r.isCall()) callers++;
+                                        ^
+  symbol:   method isCall()
+  location: variable r of type ghidra.program.model.symbol.Reference
+skipping /home/kali/Desktop/rea/Dungeon Keeper 2/port/re/GhidraExportScript.java
+ (HeadlessAnalyzer)  
+ERROR REPORT SCRIPT ERROR: GhidraExportScript.java : The class could not be found. It must be the public class of the .java file: GhidraExportScript not found by 7f7a4e6b [2] (HeadlessAnalyzer) ghidra.app.script.GhidraScriptLoadException: The class could not be found. It must be the public class of the .java file: GhidraExportScript not found by 7f7a4e6b [2]
+	at ghidra.app.script.JavaScriptProvider.getScriptInstance(JavaScriptProvider.java:114)
+	at ghidra.app.util.headless.HeadlessAnalyzer.runScriptsList(HeadlessAnalyzer.java:929)
+	at ghidra.app.util.headless.HeadlessAnalyzer.analyzeProgram(HeadlessAnalyzer.java:1107)
+	at ghidra.app.util.headless.HeadlessAnalyzer.processFileWithImport(HeadlessAnalyzer.java:1606)
+	at ghidra.app.util.headless.HeadlessAnalyzer.processWithLoader(HeadlessAnalyzer.java:1770)
+	at ghidra.app.util.headless.HeadlessAnalyzer.processWithImport(HeadlessAnalyzer.java:1705)
+	at ghidra.app.util.headless.HeadlessAnalyzer.processWithImport(HeadlessAnalyzer.java:1795)
+	at ghidra.app.util.headless.HeadlessAnalyzer.processLocal(HeadlessAnalyzer.java:464)
+	at ghidra.app.util.headless.AnalyzeHeadless.launch(AnalyzeHeadless.java:211)
+	at ghidra.GhidraLauncher.launch(GhidraLauncher.java:78)
+	at ghidra.Ghidra.main(Ghidra.java:41)
+Caused by: java.lang.ClassNotFoundException: GhidraExportScript not found by 7f7a4e6b [2]
+	at org.apache.felix.framework.BundleWiringImpl.findClassOrResourceByDelegation(BundleWiringImpl.java:1591)
+	at org.apache.felix.framework.BundleWiringImpl.access$300(BundleWiringImpl.java:79)
+	at org.apache.felix.framework.BundleWiringImpl$BundleClassLoader.loadClass(BundleWiringImpl.java:1976)
+	at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:490)
+	at org.apache.felix.framework.Felix.loadBundleClass(Felix.java:2116)
+	at org.apache.felix.framework.BundleImpl.loadClass(BundleImpl.java:986)
+	at ghidra.app.script.JavaScriptProvider.loadClass(JavaScriptProvider.java:166)
+	at ghidra.app.script.JavaScriptProvider.getScriptInstance(JavaScriptProvider.java:97)
+	... 10 more
+ 
+INFO  ANALYZING changes made by post scripts: file:///home/kali/Desktop/rea/Dungeon Keeper 2/DKII.EXE (HeadlessAnalyzer)  
+INFO  REPORT: Post-analysis succeeded for file: file:///home/kali/Desktop/rea/Dungeon Keeper 2/DKII.EXE (HeadlessAnalyzer)  
+INFO  /DKII.EXE: file created (kali) (LocalFileSystem)  
+INFO  REPORT: Save succeeded for: /DKII.EXE (dk2:/DKII.EXE) (HeadlessAnalyzer)  
+INFO  REPORT: Import succeeded (HeadlessAnalyzer)  

@@ -1,0 +1,83 @@
+openjdk version "25.0.5" 2026-10-20
+OpenJDK Runtime Environment (build 25.0.5+8-1-Debian)
+OpenJDK 64-Bit Server VM (build 25.0.5+8-1-Debian, mixed mode)
+INFO  Using log config file: jar:file:/home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Framework/Generic/lib/Generic.jar!/generic.log4j.xml (LoggingInitialization)  
+INFO  Using log file: /home/kali/.config/ghidra/ghidra_12.2_PUBLIC/application.log (LoggingInitialization)  
+INFO  Loading user preferences: /home/kali/.config/ghidra/ghidra_12.2_PUBLIC/preferences (Preferences)  
+INFO  Searching for classes... (ClassSearcher)  
+INFO  Class search complete (5088 ms) (ClassSearcher)  
+INFO  Initializing SSL Context (DefaultSSLContextInitializer)  
+INFO  Initializing Random Number Generator... (SecureRandomFactory)  
+INFO  Random Number Generator initialization complete: NativePRNGNonBlocking (SecureRandomFactory)  
+INFO  Loaded 121 trusted CA certificate(s) from /etc/ssl/certs/ca-certificates.crt (UnixSystemTrustKeyStoreUtil)  
+INFO  Loaded 121 trusted CA certificates from the OS trust store. (DefaultTrustManagerFactory)  
+INFO  Loaded 121 trusted CA certificates from the Java default trust store. (DefaultTrustManagerFactory)  
+INFO  Headless startup complete (15004 ms) (AnalyzeHeadless)  
+INFO  Class searcher loaded 60 extension points (19 false positives) (ClassSearcher)  
+INFO  HEADLESS Script Paths:
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/Decompiler/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/FunctionID/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/PDB/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/DecompilerDependent/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/VersionTracking/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Debug/Debugger-rmi-trace/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/Base/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/WildcardAssembler/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/SystemEmulation/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Processors/DATA/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Processors/PIC/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Processors/JVM/ghidra_scripts
+    /home/kali/Desktop/rea/Dungeon Keeper 2/port/re
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/Swift/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Processors/8051/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Processors/Atmel/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/GnuDemangler/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Debug/Debugger/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/FileFormats/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/PyGhidra/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/BytePatterns/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/MicrosoftCodeAnalyzer/ghidra_scripts
+    /home/kali/.local/share/rea-tools/ghidra_12.2_PUBLIC/Ghidra/Features/BSim/ghidra_scripts (HeadlessAnalyzer)  
+INFO  HEADLESS: execution starts (HeadlessAnalyzer)  
+INFO  Opening existing project: /home/kali/ghidra-dk2-project/dk2 (HeadlessAnalyzer)  
+INFO  Opening project: /home/kali/ghidra-dk2-project/dk2 (HeadlessProject)  
+INFO  REPORT: Processing project file: /DKII.EXE (HeadlessAnalyzer)  
+INFO  REPORT: Execute script: GhidraExportScript.java  (HeadlessAnalyzer)  
+INFO  SCRIPT: /home/kali/Desktop/rea/Dungeon Keeper 2/port/re/GhidraExportScript.java (HeadlessAnalyzer)  
+INFO  GhidraExportScript.java> DK2 EXPORT: output = /home/kali/Desktop/rea/Dungeon Keeper 2/port/re/ghidra (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: program = DKII.EXE (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 250 functions, 250 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 500 functions, 500 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 750 functions, 750 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 1000 functions, 1000 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 1250 functions, 1250 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 1500 functions, 1500 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 1750 functions, 1750 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 2000 functions, 2000 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 2250 functions, 2250 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 2500 functions, 2500 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 2750 functions, 2750 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 3000 functions, 3000 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 3250 functions, 3250 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 3500 functions, 3500 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 3750 functions, 3750 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 4000 functions, 4000 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 4250 functions, 4250 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 4500 functions, 4500 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 4750 functions, 4750 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 5000 functions, 5000 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 5250 functions, 5250 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 5500 functions, 5500 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 5750 functions, 5750 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 6000 functions, 6000 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 6250 functions, 6250 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 6500 functions, 6500 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 6750 functions, 6750 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 7000 functions, 7000 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 7250 functions, 7250 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 7500 functions, 7500 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 7750 functions, 7750 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 8000 functions, 8000 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT: 8250 functions, 8250 decompiled (GhidraScript)  
+INFO  GhidraExportScript.java> DK2 EXPORT DONE: functions=8260 decompiled=8260 failed=0 (GhidraScript)  
+INFO  REPORT: Save succeeded for processed file: /DKII.EXE (HeadlessAnalyzer)  

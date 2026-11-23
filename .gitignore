@@ -1,0 +1,30 @@
+# Original copyrighted game resources and extracted data
+build/
+.work/
+research/
+*.kmf
+*.obj
+*.wav
+*.mp1
+*.mp2
+*.png
+*.bin
+
+# Xcode / build
+ios/build/
+ios/DK2Port.xcodeproj/
+*.xcuserstate
+DerivedData/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# OS
+.DS_Store
+
+# Large Ghidra per-function exports (regenerate with tools/run_ghidra_export.sh)
+re/ghidra/decomp/
+re/ghidra/asm/
+tmp/

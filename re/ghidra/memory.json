@@ -1,0 +1,15 @@
+[
+{"name":"Headers","start":"00400000","end":"004003ff","read":true,"write":false,"execute":false,"size":1024},
+{"name":".text","start":"00401000","end":"00652fff","read":true,"write":false,"execute":true,"size":2433024},
+{"name":"cseg","start":"00653000","end":"0066bfff","read":true,"write":false,"execute":true,"size":102400},
+{"name":".rdata","start":"0066c000","end":"0068dfff","read":true,"write":false,"execute":false,"size":139264},
+{"name":".data","start":"0068e000","end":"007a6fff","read":true,"write":true,"execute":false,"size":1150976},
+{"name":"grpoly_d","start":"007a7000","end":"007a7fff","read":true,"write":true,"execute":false,"size":4096},
+{"name":"uva_data","start":"007a8000","end":"007acfff","read":true,"write":true,"execute":false,"size":20480},
+{"name":"idct_dat","start":"007ad000","end":"007aefff","read":true,"write":true,"execute":false,"size":8192},
+{"name":"tqia_dat","start":"007af000","end":"007affff","read":true,"write":true,"execute":false,"size":4096},
+{"name":"dseg","start":"007b0000","end":"007b1fff","read":true,"write":true,"execute":false,"size":8192},
+{"name":"lbmpeg_d","start":"007b2000","end":"007b2fff","read":true,"write":true,"execute":false,"size":4096},
+{"name":".rsrc","start":"007b3000","end":"007b5fff","read":true,"write":false,"execute":false,"size":12288},
+{"name":"tdb","start":"ffdff000","end":"ffdfffff","read":true,"write":true,"execute":false,"size":4096}
+]
