@@ -17,7 +17,8 @@ jobs:
           python3 tests/make_fixture_map.py build/fixture.bin
           clang++ -std=c++17 -O2 -Wall -Wextra \
             -o build/engine_tests \
-            tests/engine_tests.cpp engine/DK2.cpp engine/GridSimulation.cpp
+            tests/engine_tests.cpp engine/DK2.cpp engine/GridSimulation.cpp \
+            engine/Structures.cpp
           ./build/engine_tests build/fixture.bin
 
   build-ios:
@@ -39,7 +40,7 @@ jobs:
           cp -R game/Data ios/DK2Port/Resources/Original/Data
           python3 tools/import_assets.py --game-root game \
             --out ios/DK2Port/Resources/Assets --skip-audio
-          (cd decoder && ./build.sh)
+          DK2_GAME_ROOT=../game DK2_KMF_DIR=../build/KMF bash -c 'cd decoder && ./build.sh' 
           python3 tools/kmsh_decompress.py batch game/Data/Meshes.WAD \
             build/KMF --json > build/kmf_manifest.json
           python3 tools/export_meshes.py
