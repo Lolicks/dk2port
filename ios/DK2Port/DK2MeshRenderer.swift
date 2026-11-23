@@ -71,7 +71,6 @@ final class DK2MeshRenderer {
         depthDescriptor.fragmentFunction = fragment
         depthDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
         depthDescriptor.vertexDescriptor = DK2MeshRenderer.vertexDescriptor()
-        depthDescriptor.depthStencilPixelFormat = .depth32float
         let depthPipeline = try? device.makeRenderPipelineState(descriptor: depthDescriptor)
 
         let depthDesc = MTLDepthStencilDescriptor()
