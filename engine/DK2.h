@@ -7,10 +7,10 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <memory>
+#include "GridSimulation.h"
 #include <vector>
 
 namespace dk2 {
-class GridSimulation;
 
 constexpr uint32_t kMapMagic = 0x4d324b44;  // "DK2M" read as little-endian u32
 constexpr float kTickSeconds = 1.0f / 30.0f;
