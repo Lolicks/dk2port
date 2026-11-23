@@ -74,6 +74,7 @@ struct DK2MenuView: View {
 struct DK2RootView: View {
     @State private var selected: DK2MapEntry?
     @State private var state: NSDictionary = [:]
+    @StateObject private var resources = DK2ResourceManager.shared
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -87,9 +88,17 @@ struct DK2RootView: View {
                 }
                 .padding()
             } else {
-                DK2FrontEndView(missions: DK2AssetLoader.missions ?? []) { map in
-                    selected = map
+                VStack {
+                    if !resources.ready {
+                        ProgressView(resources.status)
+                            .foregroundColor(.white)
+                    } else {
+                        DK2FrontEndView(missions: DK2AssetLoader.missions ?? []) { map in
+                            selected = map
+                        }
+                    }
                 }
+                .onAppear { resources.initialize() }
             }
         }
     }

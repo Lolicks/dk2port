@@ -38,6 +38,8 @@ jobs:
           cp -R game/Data ios/DK2Port/Resources/Original/Data
           python3 tools/import_assets.py --game-root game \
             --out ios/DK2Port/Resources/Assets --skip-audio
+          python3 tools/make_integrity.py ios/DK2Port/Resources \
+            ios/DK2Port/Resources/Assets/integrity.json
           du -sh ios/DK2Port/Resources
       - name: Generate Xcode project
         working-directory: ios
@@ -63,6 +65,29 @@ jobs:
           cp -R "$APP" build/ipa/Payload/
           (cd build/ipa && zip -q -r DK2Port.ipa Payload)
           ls -lh build/ipa/DK2Port.ipa
+      - name: Verify IPA contents
+        working-directory: ios
+        run: |
+          set -euo pipefail
+          IPA=build/ipa/DK2Port.ipa
+          test -s "$IPA"
+          echo "IPA size: $(stat -f%z "$IPA") bytes"
+          for f in \
+            Payload/DK2Port.app/Original/Data/Meshes.WAD \
+            Payload/DK2Port.app/Original/Data/FrontEnd.WAD \
+            Payload/DK2Port.app/Original/Data/Movies/INTRO.TGQ \
+            Payload/DK2Port.app/Assets/data/stats.json \
+            Payload/DK2Port.app/Assets/data/triggers.json \
+            Payload/DK2Port.app/Assets/maps/maps.json \
+            Payload/DK2Port.app/Assets/integrity.json; do
+            unzip -l "$IPA" | grep -q "$f" || { echo "MISSING $f"; exit 1; }
+            echo "OK $f"
+          done
+          if grep -R 'appendingPathComponent("Original")' DK2Port --include='*.swift' \
+             | grep -v 'Bundle.main'; then
+            echo "unexpected Documents/Original dependency"; exit 1
+          fi
+          echo "No mandatory Documents/Original dependency"
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
