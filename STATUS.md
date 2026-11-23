@@ -5,7 +5,7 @@
 
 ## Build & distribution
 
-- Last successful CI run: https://github.com/Lolicks/dk2port/actions/runs/45251658673
+- Last successful CI run: https://github.com/Lolicks/dk2port/actions/runs/45244837079
 - IPA size: 492,544,759 bytes (469.7 MiB)
 - Permanent download: https://github.com/Lolicks/dk2port/releases/latest (asset `DK2Port-IPA`)
 - Signed: **NO** — Unsigned IPA; user re-signs with Sideloadly.
