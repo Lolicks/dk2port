@@ -24,7 +24,7 @@ final class DK2MeshRenderer {
 
         let vertexDescriptor = MTLVertexDescriptor()
         descriptor.vertexDescriptor = vertexDescriptor
-        let layout = vertexDescriptor.layouts[0]
+        let layout = vertexDescriptor.layouts[0]!
         layout.stride = 24
         layout.attributes[0].format = MTLVertexFormat.float4
         layout.attributes[0].offset = 0

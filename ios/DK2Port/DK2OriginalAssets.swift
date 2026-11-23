@@ -22,7 +22,7 @@ enum DK2OriginalAssets {
 
     static func wadInfo(_ name: String) -> NSDictionary? {
         guard let data = data("Data/\(name)") else { return nil }
-        return try? DK2DecoderBridge.wadInfo(data)
+        do { return try DK2DecoderBridge.wadInfo(data) } catch { return nil }
     }
 
     /// Decode a compressed WAD entry into real KMF bytes.
@@ -37,17 +37,17 @@ enum DK2OriginalAssets {
 
     static func meshOBJ(entry: String, in wad: String = "Meshes.WAD") -> Data? {
         guard let kmf = kmf(entry: entry, in: wad) else { return nil }
-        return try? DK2DecoderBridge.kmfObj(kmf)
+        do { return try DK2DecoderBridge.kmfObj(kmf) } catch { return nil }
     }
 
     static func animFrames(entry: String, limit: Int = 8) -> [Data]? {
         guard let kmf = kmf(entry: entry) else { return nil }
-        return try? DK2DecoderBridge.animFrames(kmf, limit: UInt(limit))
+        do { return try DK2DecoderBridge.animFrames(kmf, limit: UInt(limit)) } catch { return nil }
     }
 
     static func movieInfo(_ name: String) -> NSDictionary? {
         guard let data = data("Data/Movies/\(name)") else { return nil }
-        return try? DK2DecoderBridge.tgqInfo(data)
+        do { return try DK2DecoderBridge.tgqInfo(data) } catch { return nil }
     }
 
     static func movieAudioWAV(_ name: String) -> URL? {
@@ -55,8 +55,8 @@ enum DK2OriginalAssets {
         let target = FileManager.default.urls(for: .cachesDirectory,
                                               in: .userDomainMask)[0]
             .appendingPathComponent("\(name).wav")
-        guard (try? DK2DecoderBridge.extractTgqAudio(data, toWAV: target.path)) != nil
-        else { return nil }
+        do { try DK2DecoderBridge.extractTgqAudio(data, toWAV: target.path) }
+        catch { return nil }
         return target
     }
 }
