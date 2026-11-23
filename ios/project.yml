@@ -28,11 +28,6 @@ targets:
       - path: ../decoder/tgq
       - path: ../decoder/tqi
       - path: ../decoder/audio
-    resources:
-      - path: DK2Port/Assets
-        type: folder
-      - path: DK2Port/Resources
-        type: folder
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.dk2port.ios
       PRODUCT_NAME: DK2Port

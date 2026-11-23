@@ -57,6 +57,8 @@ jobs:
           set -euo pipefail
           APP=$(find build/DK2Port.xcarchive/Products/Applications -maxdepth 1 -name '*.app' -print -quit)
           test -n "$APP" || { echo "no .app in archive"; exit 1; }
+          cp -R DK2Port/Resources/Assets "$APP/Assets"
+          cp -R DK2Port/Resources/Original "$APP/Original"
           mkdir -p build/ipa/Payload
           cp -R "$APP" build/ipa/Payload/
           (cd build/ipa && zip -q -r DK2Port.ipa Payload)
