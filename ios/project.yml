@@ -13,21 +13,21 @@ targets:
       - path: DK2Port
         excludes:
           - "DK2-Bridging-Header.h"
-      - path: ../../engine/DK2.cpp
-      - path: ../../engine/DK2.h
-      - path: ../../engine/GridSimulation.cpp
-      - path: ../../engine/GridSimulation.h
-      - path: ../../engine/Balance.generated.hpp
-      - path: ../../engine/CreatureStats.generated.hpp
-      - path: ../../engine/MissionRules.generated.hpp
-      - path: ../../engine/SpellData.generated.hpp
-      - path: ../../decoder/core
-      - path: ../../decoder/wad
-      - path: ../../decoder/kmsh
-      - path: ../../decoder/kmf
-      - path: ../../decoder/tgq
-      - path: ../../decoder/tqi
-      - path: ../../decoder/audio
+      - path: ../engine/DK2.cpp
+      - path: ../engine/DK2.h
+      - path: ../engine/GridSimulation.cpp
+      - path: ../engine/GridSimulation.h
+      - path: ../engine/Balance.generated.hpp
+      - path: ../engine/CreatureStats.generated.hpp
+      - path: ../engine/MissionRules.generated.hpp
+      - path: ../engine/SpellData.generated.hpp
+      - path: ../decoder/core
+      - path: ../decoder/wad
+      - path: ../decoder/kmsh
+      - path: ../decoder/kmf
+      - path: ../decoder/tgq
+      - path: ../decoder/tqi
+      - path: ../decoder/audio
     resources:
       - path: DK2Port/Assets
     settings:
