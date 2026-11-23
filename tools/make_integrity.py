@@ -26,6 +26,7 @@ CRITICAL = [
 
 
 def main(argv=None):
+    argv = argv or sys.argv
     if len(argv) < 3:
         print("usage: make_integrity.py <resources-root> <out.json>", file=sys.stderr)
         return 2
