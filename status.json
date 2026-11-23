@@ -40,7 +40,7 @@
     {
       "name": "Mission triggers (9161 records, WIN/LOSE)",
       "state": "partial",
-      "evidence": "docs/triggers.json; OR next-chain + fired-set in engine/DK2.cpp"
+      "evidence": "docs/triggers.json; OR chain, fired-set, flags/timers/time-limit/hero party actions in DK2.cpp"
     },
     {
       "name": "TGQ/TQI video decode in C",
@@ -65,7 +65,7 @@
     {
       "name": "C++ core: fixed-step loop, A*, economy, combat, magic",
       "state": "partial",
-      "evidence": "engine/DK2.cpp; grid sim connected, trap/door placement, full save v3"
+      "evidence": "engine/DK2.cpp; full AI stats, combat cooldown, traps/doors, grid sim, save v4"
     },
     {
       "name": "Metal tile renderer + touch camera controls",
@@ -84,8 +84,8 @@
     },
     {
       "name": "Cutscene/video playback in iOS UI",
-      "state": "missing",
-      "evidence": "DK2CutscenePlayer.swift unused; TQI outputs PPM, no RGB texture path"
+      "state": "partial",
+      "evidence": "CutsceneView.swift + Intro menu button; PNG frames produced in final build from TQI"
     },
     {
       "name": "In-game audio (SDT -> AAC/PCM, positional mixer)",
@@ -99,8 +99,8 @@
     },
     {
       "name": "Complete creature AI (jobs, moods, relations from KWD)",
-      "state": "missing",
-      "evidence": "basic jobs; AI_FUNCTIONS.md maps original functions, not yet ported"
+      "state": "partial",
+      "evidence": "AI_FUNCTIONS.md ported: XP/pay/anger/fear/spells/lifecycle; some thresholds LOW confidence"
     },
     {
       "name": "Original save-file compatibility",
@@ -109,8 +109,8 @@
     },
     {
       "name": "Lighting, shadows, particles, water visual fidelity",
-      "state": "missing",
-      "evidence": "shader stubs only; time uniform not updated"
+      "state": "partial",
+      "evidence": "EffectsPipeline.swift + Shaders.metal: depth, bump water/lava, lighting, fog-of-war; shadows approximate"
     },
     {
       "name": "Optimization / streaming for iPhone 12 mini",
@@ -150,7 +150,7 @@
     {
       "name": "Full game-state serialization",
       "state": "done",
-      "evidence": "DK2S v3 in engine/DK2.cpp saves mana/research/spells/mission/job/path"
+      "evidence": "DK2S v4: flags/timers/objective/time-limit + full creature/economy state"
     },
     {
       "name": "Original grid simulation in game loop",

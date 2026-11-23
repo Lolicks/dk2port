@@ -139,8 +139,12 @@ def gen_trigger_data(triggers):
                 value = float(value)
             except (TypeError, ValueError):
                 value = 0.0
+            try:
+                fid = int(params.get("flag_id", params.get("timer_id", 0)) or 0)
+            except (TypeError, ValueError):
+                fid = 0
             nodes.append(
-                '        {%d,%d,%d,%.1ff,%d,%d,%d},' % (
+                '        {%d,%d,%d,%.1ff,%d,%d,%d,%d},' % (
                     int(n.get("id", 0)),
                     1 if n.get("kind") == "action" else 0,
                     int(n.get("type_id", 0)),
@@ -148,6 +152,7 @@ def gen_trigger_data(triggers):
                     int(n.get("next_id", 0)),
                     int(n.get("child_id", 0)),
                     int(params.get("player_id", 0) or 0),
+                    fid,
                 )
             )
         out.append('    {"%s", %d,' %
@@ -164,6 +169,7 @@ struct DK2TriggerNode {
     unsigned next;
     unsigned child;
     unsigned player;
+    unsigned id_param;   // flag_id / timer_id / action-point id
 };
 struct DK2MissionTriggers {
     const char *map;

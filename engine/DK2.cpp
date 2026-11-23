@@ -221,7 +221,7 @@ static void unpack_extras(Creature& c, const SaveCreatureExtras& e) {
     c.lair_check_timer = e.lair_check_timer;
 }
 constexpr uint32_t kSaveMagic = 0x324b3244;  // "DK2S"
-constexpr uint32_t kSaveVersion = 3;
+constexpr uint32_t kSaveVersion = 4;
 constexpr uint32_t kSaveExtMagic = 0x454b3244;  // "DK2E" trailer
 
 // AI flags recovered from the Creatures.kwd boolean fields.
@@ -1450,8 +1450,15 @@ static bool condition_true(const DK2TriggerNode& n, const GameState& s) {
     for (const Creature& c : s.creatures)
         if (c.team == 0 && c.state != CreatureState::Dead) ++keeper;
     switch (n.type) {
-        case 1:  return s.elapsed > 2.0f;  /* FLAG: no flag model yet */
-        case 2:  return n.value <= 0.0f || s.elapsed >= n.value;  /* TIMER */
+        case 1: {
+            unsigned id = n.id_param & 255u;
+            return id < s.flags.size() ? s.flags[id] != 0 : false;
+        }
+        case 2: {
+            unsigned id = n.id_param & 255u;
+            float value = id < s.timers.size() ? s.timers[id] : 0.0f;
+            return n.value <= 0.0f || value >= n.value;
+        }
         case 19: return float(keeper) >= n.value;                 /* PLAYER_CREATURES */
         case 25: return float(s.rooms.size()) >= n.value;         /* PLAYER_ROOMS */
         case 30: return s.economy.gold >= n.value;                /* PLAYER_GOLD */
@@ -1496,6 +1503,26 @@ void Game::evaluate_triggers() {
         fired_actions_.insert(action->id);
 
         switch (action->type) {
+            case 7: {  /* FLAG */
+                unsigned id = action->id_param & 255u;
+                if (id < state_.flags.size())
+                    state_.flags[id] = uint8_t(action->value != 0.0f ? 1 : 0);
+                break;
+            }
+            case 8: {  /* INITIALIZE_TIMER */
+                unsigned id = action->id_param & 255u;
+                if (id < state_.timers.size()) state_.timers[id] = 0.0f;
+                break;
+            }
+            case 23: state_.time_limit = action->value; break;  /* SET_TIME_LIMIT */
+            case 25: state_.objective_id = int(action->id_param); break;  /* DISPLAY_TEXT_STRING */
+            case 15: state_.objective_id = int(action->id_param); break;  /* SET_OBJECTIVE */
+            case 14: {  /* CREATE_HERO_PARTY */
+                int x = state_.world.width - 4, y = state_.world.height / 2;
+                for (int i = 0; i < 3; ++i)
+                    spawn_creature(7 + i, x, y + i, 1);
+                break;
+            }
             case 10: state_.victory = true; break;
             case 11: state_.defeat = true; break;
             case 12: break;
@@ -1511,6 +1538,9 @@ void Game::evaluate_triggers() {
 }
 
 void Game::step() {
+    for (float& t : state_.timers) t += kTickSeconds;
+    if (state_.time_limit > 0.0f && state_.elapsed >= state_.time_limit &&
+        !state_.victory) state_.defeat = true;
     grid_accumulator_ += kTickSeconds;
     if (grid_ && grid_accumulator_ >= 0.049f) {
         grid_->step();
@@ -1603,6 +1633,9 @@ bool Game::save(const std::string& path) const {
     w32(uint32_t(state_.spells_known.size()));
     for (uint8_t v : state_.spells_known) w32(v);
     ws(state_.mission_name);
+    for (uint8_t f : state_.flags) w32(f);
+    for (float t : state_.timers) wf(t);
+    wf(state_.time_limit); wi(state_.objective_id);
     wi(int(state_.victory)); wi(int(state_.defeat));
     wf(state_.camera.center_x); wf(state_.camera.center_y);
     wf(state_.camera.zoom); wf(state_.camera.yaw); wf(state_.camera.pitch);
@@ -1675,6 +1708,9 @@ bool Game::load(const std::string& path) {
     r32(n); state_.spells_known.resize(n <= 1024 ? n : 0);
     for (uint8_t& v : state_.spells_known) { uint32_t x; r32(x); v = uint8_t(x); }
     rs(state_.mission_name);
+    for (uint8_t& f : state_.flags) { uint32_t x; r32(x); f = uint8_t(x); }
+    for (float& t : state_.timers) rf(t);
+    rf(state_.time_limit); ri(state_.objective_id);
     int flag;
     ri(flag); state_.victory = flag != 0;
     ri(flag); state_.defeat = flag != 0;

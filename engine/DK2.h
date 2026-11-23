@@ -265,6 +265,10 @@ struct GameState {
     std::vector<float> research;      // per-spell progress
     std::vector<float> cooldowns;     // per-spell remaining seconds
     std::vector<uint8_t> spells_known;
+    std::array<uint8_t, 256> flags{};
+    std::array<float, 256> timers{};
+    float time_limit = 0.0f;
+    int objective_id = 0;
     CameraState camera;
     GameConfig config;
     float elapsed = 0;
