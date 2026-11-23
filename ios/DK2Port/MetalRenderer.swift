@@ -1,6 +1,7 @@
 import Foundation
 import Metal
 import MetalKit
+import simd
 import UIKit
 
 struct DK2Uniforms {
@@ -88,88 +89,56 @@ final class DK2Atlas {
 final class DK2MetalRenderer: NSObject, MTKViewDelegate {
     private let device: MTLDevice
     private let queue: MTLCommandQueue
-    private let pipeline: MTLRenderPipelineState
-    private let sampler: MTLSamplerState
-    private var uniforms = DK2Uniforms()
     private let bridge: DK2Bridge
+    private var uniforms = DK2Uniforms()
     private var instances: [DK2Instance] = []
+    private var fogInstances: [DK2FogInstance] = []
     private var creatureData: [[AnyHashable: Any]] = []
-    private var particlePipeline: MTLRenderPipelineState?
-    private var particleBuffer: MTLBuffer?
-    private var particleCount = 0
-    private var texture: MTLTexture?
-    private var meshRenderer: DK2MeshRenderer?
+    private let effectsRenderer: DK2EffectsRenderer
+    private let particleBuffer: MTLBuffer?
+    private let particleCount = 64
+    private var instanceBuffer: MTLBuffer?
+    private var fogBuffer: MTLBuffer?
+    private var instanceCapacity = 0
+    private var fogCapacity = 0
 
     init?(metalView: MTKView, bridge: DK2Bridge, assetRoot: URL) {
         guard let device = MTLCreateSystemDefaultDevice(),
               let queue = device.makeCommandQueue(),
-              let library = device.makeDefaultLibrary(),
-              let vertex = library.makeFunction(name: "instance_vertex"),
-              let fragment = library.makeFunction(name: "instance_fragment")
+              let library = device.makeDefaultLibrary()
         else { return nil }
 
-        let descriptor = MTLRenderPipelineDescriptor()
-        descriptor.vertexFunction = vertex
-        descriptor.fragmentFunction = fragment
-        descriptor.colorAttachments[0].pixelFormat = metalView.colorPixelFormat
-        descriptor.colorAttachments[0].isBlendingEnabled = false
+        // Depth must be configured before the view creates its first texture.
+        DK2DepthSupport.configureView(metalView)
 
-        do {
-            self.pipeline = try device.makeRenderPipelineState(descriptor: descriptor)
-        } catch {
-            return nil
-        }
+        DK2Atlas.shared.build(device: device, assetRoot: assetRoot)
+        DK2BumpAtlas.shared.build(device: device, assetRoot: assetRoot)
 
-        let samplerDesc = MTLSamplerDescriptor()
-        samplerDesc.minFilter = .nearest
-        samplerDesc.magFilter = .nearest
-        samplerDesc.sAddressMode = .clampToEdge
-        samplerDesc.tAddressMode = .clampToEdge
-        guard let sampler = device.makeSamplerState(descriptor: samplerDesc) else { return nil }
+        guard let atlas = DK2Atlas.shared.texture,
+              let bumpAtlas = DK2BumpAtlas.shared.texture,
+              let effects = DK2EffectsRenderer(device: device, library: library,
+                                               colorFormat: metalView.colorPixelFormat,
+                                               atlas: atlas, bumpAtlas: bumpAtlas,
+                                               assetRoot: assetRoot)
+        else { return nil }
 
         self.device = device
         self.queue = queue
-        self.sampler = sampler
         self.bridge = bridge
+        self.effectsRenderer = effects
+        self.particleBuffer = Self.makeParticles(device: device)
 
         super.init()
 
-        DK2Atlas.shared.build(device: device, assetRoot: assetRoot)
-        self.texture = DK2Atlas.shared.texture
-        if let atlas = DK2Atlas.shared.texture {
-            self.meshRenderer = DK2MeshRenderer(device: device, atlas: atlas,
-                                                assetRoot: assetRoot)
-        }
-        if let pl = library.makeFunction(name: "particle_vertex"),
-           let pf = library.makeFunction(name: "particle_fragment") {
-            let pd = MTLRenderPipelineDescriptor()
-            pd.vertexFunction = pl
-            pd.fragmentFunction = pf
-            let vd = MTLVertexDescriptor()
-            vd.attributes[0].format = MTLVertexFormat.float4
-            vd.attributes[0].offset = 0
-            vd.attributes[0].bufferIndex = 0
-            vd.attributes[1].format = MTLVertexFormat.float4
-            vd.attributes[1].offset = 16
-            vd.attributes[1].bufferIndex = 0
-            vd.layouts[0].stride = 32
-            pd.vertexDescriptor = vd
-            pd.colorAttachments[0].pixelFormat = metalView.colorPixelFormat
-            pd.colorAttachments[0].isBlendingEnabled = true
-            pd.colorAttachments[0].sourceRGBBlendFactor = .sourceAlpha
-            pd.colorAttachments[0].destinationRGBBlendFactor = .one
-            pd.colorAttachments[0].rgbBlendOperation = .add
-            self.particlePipeline = try? device.makeRenderPipelineState(descriptor: pd)
-        }
-        self.particleBuffer = Self.makeParticles(device: device)
-        metalView.device = device
         metalView.delegate = self
         metalView.clearColor = MTLClearColor(red: 0.04, green: 0.03, blue: 0.05, alpha: 1)
     }
 
     func reloadInstances() {
         var result: [DK2Instance] = []
-        for tile in bridge.tileInstances {
+        var fog: [DK2FogInstance] = []
+        let tiles = bridge.tileInstances
+        for tile in tiles {
             guard let x = tile["x"] as? Float, let y = tile["y"] as? Float,
                   let index = tile["index"] as? UInt32 else { continue }
             let owner = tile["owner"] as? UInt8 ?? 0
@@ -177,8 +146,18 @@ final class DK2MetalRenderer: NSObject, MTKViewDelegate {
                 ? SIMD4<Float>(1, 1, 1, Float(index))
                 : SIMD4<Float>(0.85, 0.75, 0.95, Float(index))
             let terrain = Int(tile["terrain"] as? Int32 ?? 0)
+
+            var rawFlags = tile["flags"]
+            if rawFlags == nil { rawFlags = tile["tileFlags"] }
+            let flags = (rawFlags as? NSNumber)?.uint8Value
+                ?? (rawFlags as? UInt8).map { $0 }
+                ?? (rawFlags as? Int).map { UInt8(truncatingIfNeeded: $0) }
+                ?? 0
+            let shadow = (tile["shadow"] as? NSNumber)?.floatValue
+                ?? ((flags & 0x40) != 0 ? 1.0 : 0.0)
+
             let fx = SIMD4<Float>(terrain == 3 ? 1 : (terrain == 4 ? 2 : 0),
-                                  Float(index % 16) * 0.4, 0, 0)
+                                  Float(index % 16) * 0.4, shadow, 0)
             result.append(DK2Instance(worldSize: SIMD4<Float>(x + 0.5, y + 0.5, 1, 1),
                                       tintIndex: tint, effect: fx))
         }
@@ -191,6 +170,7 @@ final class DK2MetalRenderer: NSObject, MTKViewDelegate {
                                       effect: SIMD4<Float>(0, 0, 0, 0)))
         }
         instances = result
+        instanceBuffer = upload(result, to: &instanceBuffer, capacity: &instanceCapacity)
 
         let snap = bridge.snapshot
         uniforms.center = SIMD2<Float>(snap["centerX"] as? Float ?? 0,
@@ -198,6 +178,29 @@ final class DK2MetalRenderer: NSObject, MTKViewDelegate {
         uniforms.zoom = snap["zoom"] as? Float ?? 1
         uniforms.yaw = snap["yaw"] as? Float ?? 0
         uniforms.time = Float(Date().timeIntervalSince1970.truncatingRemainder(dividingBy: 1024.0))
+
+        fog = DK2EffectsRenderer.fogInstances(from: tiles, center: uniforms.center)
+        fogInstances = fog
+        fogBuffer = upload(fog, to: &fogBuffer, capacity: &fogCapacity)
+    }
+
+    /// Grows a shared buffer on demand; instance arrays are far larger than
+    /// the ~4 KB limit of setVertexBytes, so they always go through MTLBuffer.
+    private func upload<T>(_ values: [T], to buffer: inout MTLBuffer?,
+                           capacity: inout Int) -> MTLBuffer? {
+        guard !values.isEmpty else { return nil }
+        let length = values.count * MemoryLayout<T>.stride
+        if capacity < length {
+            capacity = max(length, capacity * 2)
+            buffer = device.makeBuffer(length: capacity, options: .storageModeShared)
+        }
+        guard let target = buffer else { return nil }
+        values.withUnsafeBytes { raw in
+            if let base = raw.baseAddress {
+                memcpy(target.contents(), base, length)
+            }
+        }
+        return target
     }
 
     private static func makeParticles(device: MTLDevice) -> MTLBuffer? {
@@ -222,28 +225,30 @@ final class DK2MetalRenderer: NSObject, MTKViewDelegate {
         reloadInstances()
         guard let drawable = view.currentDrawable,
               let pass = view.currentRenderPassDescriptor,
-              let command = queue.makeCommandBuffer(),
-              let encoder = command.makeRenderCommandEncoder(descriptor: pass),
-              !instances.isEmpty
+              let command = queue.makeCommandBuffer()
         else { return }
 
-        encoder.setRenderPipelineState(pipeline)
-        encoder.setVertexBytes(&uniforms, length: MemoryLayout<DK2Uniforms>.size, index: 0)
-        encoder.setFragmentBytes(&uniforms, length: MemoryLayout<DK2Uniforms>.size, index: 0)
-        encoder.setVertexBytes(&instances, length: instances.count * MemoryLayout<DK2Instance>.size,
-                               index: 1)
-        encoder.setFragmentTexture(texture, index: 0)
-        encoder.setFragmentSamplerState(sampler, index: 0)
-        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6,
-                               instanceCount: instances.count)
-        meshRenderer?.draw(encoder: encoder, uniforms: uniforms,
-                           creatures: creatureData)
-        if let pp = particlePipeline, let pb = particleBuffer {
-            encoder.setRenderPipelineState(pp)
-            encoder.setVertexBytes(&uniforms, length: MemoryLayout<DK2Uniforms>.size, index: 0)
-            encoder.setVertexBuffer(pb, offset: 0, index: 0)
-            encoder.drawPrimitives(type: .point, vertexStart: 0, vertexCount: 64)
+        DK2DepthSupport.configureRenderPass(pass)
+        guard let encoder = command.makeRenderCommandEncoder(descriptor: pass)
+        else { return }
+
+        if let buffer = instanceBuffer {
+            effectsRenderer.drawTiles(encoder: encoder, uniforms: uniforms,
+                                      instanceBuffer: buffer,
+                                      instanceCount: instances.count)
         }
+        effectsRenderer.drawMeshes(encoder: encoder, uniforms: uniforms,
+                                   creatures: creatureData)
+        if let particles = particleBuffer {
+            effectsRenderer.drawParticles(encoder: encoder, uniforms: uniforms,
+                                          buffer: particles, count: particleCount)
+        }
+        if let buffer = fogBuffer {
+            effectsRenderer.drawFog(encoder: encoder, uniforms: uniforms,
+                                    instanceBuffer: buffer,
+                                    instanceCount: fogInstances.count)
+        }
+
         encoder.endEncoding()
         command.present(drawable)
         command.commit()

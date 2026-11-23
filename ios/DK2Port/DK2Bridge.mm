@@ -138,6 +138,7 @@ static uint32_t atlasIndexForTerrain(uint8_t terrain) {
                 @"y": @(float(y)),
                 @"index": @(atlasIndexForTerrain(t->terrain)),
                 @"terrain": @(t->terrain),
+                @"flags": @(t->flags),
                 @"owner": @(t->owner),
             }];
         }
