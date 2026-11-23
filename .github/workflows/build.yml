@@ -44,6 +44,9 @@ jobs:
             build/KMF --json > build/kmf_manifest.json
           python3 tools/export_meshes.py
           cp -R build/Assets/models ios/DK2Port/Resources/Assets/models
+          python3 tools/make_movies.py --game-root game \
+            --out build/Assets/movies --frames 48
+          cp -R build/Assets/movies ios/DK2Port/Resources/Assets/movies
           brew install ffmpeg
           python3 tools/build_audio.py --game-root game \
             --out build/Assets

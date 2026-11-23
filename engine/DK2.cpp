@@ -200,6 +200,7 @@ int Game::spawn_creature(int species, int x, int y, int team) {
         const DK2CreatureStat& s = kDK2CreatureStats[species];
         c.max_hp = float(s.hp);
         c.damage = s.melee_damage;
+        c.attack_cooldown = s.melee_recharge > 0.0f ? s.melee_recharge : 1.2f;
         c.speed = s.speed;
         c.sight = s.sight_range;
         c.melee_range = std::max(0.5f, s.melee_range * 4.0f);
@@ -482,7 +483,12 @@ void Game::update_creature(Creature& c) {
         } else {
             c.job = CreatureJob::Fight;
             c.state = CreatureState::Fighting;
-            enemy->hp -= c.damage * dt;
+            if (c.attack_cooldown > 0.0f) {
+                c.attack_cooldown -= dt;
+            } else {
+                enemy->hp -= c.damage;
+                c.attack_cooldown = std::max(0.1f, c.attack_cooldown + 1.2f);
+            }
             enemy->mood = std::max(0.0f, enemy->mood - 4.0f * dt);
             if (enemy->hp <= 0.0f) {
                 enemy->hp = 0.0f;
@@ -764,7 +770,7 @@ bool Game::save(const std::string& path) const {
     for (const Creature& c : state_.creatures) {
         wi(c.id); wi(c.species); wi(c.team); wi(int(c.state));
         wi(int(c.job));
-        wf(c.x); wf(c.y); wf(c.damage); wf(c.speed); wf(c.sight);
+        wf(c.x); wf(c.y); wf(c.damage); wf(c.attack_cooldown); wf(c.speed); wf(c.sight);
         wf(c.melee_range); wf(c.fear); wf(c.mood);
         wf(c.hp); wf(c.max_hp); wf(c.hunger); wf(c.fatigue);
         wf(c.gold_carried); wf(c.max_gold);
@@ -821,7 +827,7 @@ bool Game::load(const std::string& path) {
         ri(c.id); ri(c.species); ri(c.team);
         int v; ri(v); c.state = static_cast<CreatureState>(v);
         ri(v); c.job = static_cast<CreatureJob>(v);
-        rf(c.x); rf(c.y); rf(c.damage); rf(c.speed); rf(c.sight);
+        rf(c.x); rf(c.y); rf(c.damage); rf(c.attack_cooldown); rf(c.speed); rf(c.sight);
         rf(c.melee_range); rf(c.fear); rf(c.mood);
         rf(c.hp); rf(c.max_hp); rf(c.hunger); rf(c.fatigue);
         rf(c.gold_carried); rf(c.max_gold);

@@ -82,6 +82,7 @@ struct Creature {
     float x = 0, y = 0;
     float hp = 100, max_hp = 100;
     float damage = 12;
+    float attack_cooldown = 0.0f;
     float speed = 2.0f;
     float sight = 4.0f;
     float melee_range = 1.0f;
