@@ -152,22 +152,22 @@ final class DK2GameViewController: UIViewController {
             let cy = Int32(bridge.snapshot["centerY"] as? Float ?? 0)
             switch category {
             case "trap":
-                _ = bridge.placeTrap(index, x: cx, y: cy, owner: 0)
+                _ = bridge.placeTrap(Int32(index), x: cx, y: cy, owner: 0)
             case "door":
-                _ = bridge.placeDoor(index, x: cx, y: cy, owner: 0)
+                _ = bridge.placeDoor(Int32(index), x: cx, y: cy, owner: 0)
             default:
-                _ = bridge.buildRoom(index, x: cx, y: cy, owner: 0)
+                _ = bridge.buildRoom(Int32(index), x: cx, y: cy, owner: 0)
             }
         case DK2GameCommand.spell:
             let index = info[DK2GameCommand.Key.index] as? Int ?? 0
             let cx = bridge.snapshot["centerX"] as? Float ?? 0
             let cy = bridge.snapshot["centerY"] as? Float ?? 0
-            _ = bridge.castSpell(index, x: Int32(cx), y: Int32(cy))
+            _ = bridge.castSpell(Int32(index), x: Int32(cx), y: Int32(cy))
         case DK2GameCommand.creature:
             let index = info[DK2GameCommand.Key.index] as? Int ?? 0
             let cx = bridge.snapshot["centerX"] as? Float ?? 0
             let cy = bridge.snapshot["centerY"] as? Float ?? 0
-            _ = bridge.spawnCreature(Int32(index), x: Int32(cx), y: Int32(cy), team: 0)
+            _ = bridge.spawnCreature(Int32(index), x: Int32(cx), y: Int32(cy))
         case DK2GameCommand.save:
             if let slot = info[DK2GameCommand.Key.slot] as? String { saveGame(name: slot) }
         case DK2GameCommand.load:
