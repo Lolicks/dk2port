@@ -13,6 +13,6 @@ $CC -std=c11 -O2 -Wall -Wextra -I. \
 $CC -std=c11 -O2 -Wall -Wextra -I. \
     -o build/test_audio tests/test_audio.c $SRC
 ./build/test_decoder "${DK2_GAME_ROOT:-../..}" "${DK2_KMF_DIR:-../build/KMF}"
-./build/test_tqi "../.."
-./build/test_audio "../.." "build/BullfrogIntro_audio.wav"
+./build/test_tqi "${DK2_GAME_ROOT:-../..}"
+./build/test_audio "${DK2_GAME_ROOT:-../..}" "build/BullfrogIntro_audio.wav"
 echo "C DECODER BUILD OK"
