@@ -23,6 +23,8 @@ jobs:
 
   build-ios:
     runs-on: macos-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -93,3 +95,16 @@ jobs:
         with:
           name: DK2Port-IPA
           path: ios/build/ipa/DK2Port.ipa
+      - name: Publish IPA to permanent Release
+        working-directory: ios
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          IPA=build/ipa/DK2Port.ipa
+          if gh release view latest -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload latest "$IPA" --clobber -R "$GITHUB_REPOSITORY"
+          else
+            gh release create latest "$IPA" -R "$GITHUB_REPOSITORY" \
+              --title "DK2Port — latest build" --generate-notes
+          fi
