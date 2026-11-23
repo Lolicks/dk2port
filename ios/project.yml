@@ -18,6 +18,9 @@ targets:
       - path: ../engine/DK2.cpp
       - path: ../engine/DK2.h
       - path: ../engine/GridSimulation.cpp
+      - path: ../engine/Structures.cpp
+      - path: ../engine/Structures.h
+      - path: ../engine/Structures.generated.hpp
       - path: ../engine/GridSimulation.h
       - path: ../engine/Balance.generated.hpp
       - path: ../engine/CreatureStats.generated.hpp

@@ -6,9 +6,11 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <memory>
 #include <vector>
 
 namespace dk2 {
+class GridSimulation;
 
 constexpr uint32_t kMapMagic = 0x4d324b44;  // "DK2M" read as little-endian u32
 constexpr float kTickSeconds = 1.0f / 30.0f;
@@ -161,6 +163,8 @@ public:
     void set_mission(const std::string& name);
     int spawn_creature(int species, int x, int y, int team = 0);
     bool build_room(int type, int x, int y, int owner);
+    bool place_trap(int index, int x, int y, int owner);
+    bool place_door(int index, int x, int y, int owner);
     bool cast_spell(int spell_index, int x, int y);
     bool research_spell(int spell_index);
     void update_magic();
@@ -187,6 +191,8 @@ private:
     int next_creature_id_ = 1;
     float spell_cooldown_left_ = 0;
     std::unordered_set<unsigned> fired_actions_;
+    std::unique_ptr<GridSimulation> grid_;
+    float grid_accumulator_ = 0;
     void update_creature(Creature& c);
 };
 

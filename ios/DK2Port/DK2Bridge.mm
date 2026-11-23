@@ -67,6 +67,14 @@ static std::string stdString(NSString *s) { return s.UTF8String ?: ""; }
     return _game->cast_spell(spell, x, y);
 }
 
+- (BOOL)placeTrap:(int)index x:(int)x y:(int)y owner:(int)owner {
+    return _game->place_trap(index, x, y, owner);
+}
+
+- (BOOL)placeDoor:(int)index x:(int)x y:(int)y owner:(int)owner {
+    return _game->place_door(index, x, y, owner);
+}
+
 - (BOOL)findPathFromX:(int)sx y:(int)sy toX:(int)tx y:(int)ty result:(NSArray<NSNumber *> **)result {
     std::vector<int> path;
     if (!_game->find_path(sx, sy, tx, ty, path)) return NO;
@@ -90,6 +98,8 @@ static std::string stdString(NSString *s) { return s.UTF8String ?: ""; }
         @"width": @(s.world.width),
         @"height": @(s.world.height),
         @"gold": @(s.economy.gold),
+        @"mana": @(s.mana),
+        @"manaMax": @(s.mana_max),
         @"goldCapacity": @(s.economy.gold_capacity),
         @"treasures": @(s.economy.treasures),
         @"creatures": @(s.creatures.size()),

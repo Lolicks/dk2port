@@ -4,6 +4,8 @@
 #include "MissionRules.generated.hpp"
 #include "MissionTriggers.generated.hpp"
 #include "SpellData.generated.hpp"
+#include "Structures.h"
+#include "GridSimulation.h"
 
 #include <algorithm>
 #include <cctype>
@@ -33,7 +35,7 @@ struct SaveHeader {
     uint32_t creature_count, room_count;
 };
 constexpr uint32_t kSaveMagic = 0x324b3244;  // "DK2S"
-constexpr uint32_t kSaveVersion = 2;
+constexpr uint32_t kSaveVersion = 3;
 }  // namespace
 
 const char* terrain_name(unsigned id) {
@@ -153,6 +155,8 @@ bool Game::load_map(const uint8_t* data, size_t size, std::string* error) {
     state_.victory = state_.defeat = false;
     next_creature_id_ = 1;
     fired_actions_.clear();
+    grid_.reset(new GridSimulation(state_.world.width, state_.world.height));
+    grid_accumulator_ = 0;
     state_.economy.gold = 0;
     state_.economy.recalculate(state_.world);
     state_.mana = 1000.0f;
@@ -241,6 +245,40 @@ bool Game::build_room(int type, int x, int y, int owner) {
     tile->terrain = static_cast<uint8_t>(terrain);
     tile->owner = static_cast<uint8_t>(owner);
     state_.economy.recalculate(state_.world);
+    return true;
+}
+
+bool Game::place_trap(int index, int x, int y, int owner) {
+    const DK2TrapDef* def = structures::trap_by_index(static_cast<size_t>(index));
+    if (!def) return false;
+    Tile* tile = state_.world.at(x, y);
+    if (!tile || !terrain_walkable(static_cast<TerrainId>(tile->terrain))) return false;
+    structures::BuildCost cost = structures::trap_build_cost(def);
+    if (cost.gold > 0 && !state_.economy.withdraw(float(cost.gold))) return false;
+    if (cost.mana > 0 && state_.mana < float(cost.mana)) return false;
+    if (cost.mana > 0) state_.mana -= float(cost.mana);
+    Room trap;
+    trap.type = 1000 + index;   // distinct from room TerrainId
+    trap.x = x; trap.y = y; trap.owner = owner;
+    trap.integrity = float(structures::trap_health(def));
+    state_.rooms.push_back(trap);
+    return true;
+}
+
+bool Game::place_door(int index, int x, int y, int owner) {
+    const DK2DoorDef* def = structures::door_by_index(static_cast<size_t>(index));
+    if (!def) return false;
+    Tile* tile = state_.world.at(x, y);
+    if (!tile || !terrain_walkable(static_cast<TerrainId>(tile->terrain))) return false;
+    structures::BuildCost cost = structures::door_build_cost(def);
+    if (cost.gold > 0 && !state_.economy.withdraw(float(cost.gold))) return false;
+    if (cost.mana > 0 && state_.mana < float(cost.mana)) return false;
+    if (cost.mana > 0) state_.mana -= float(cost.mana);
+    Room door;
+    door.type = 2000 + index;
+    door.x = x; door.y = y; door.owner = owner;
+    door.integrity = float(structures::door_health(def));
+    state_.rooms.push_back(door);
     return true;
 }
 
@@ -558,9 +596,13 @@ void Game::update_creature(Creature& c) {
         tile && tile->terrain == static_cast<uint8_t>(TerrainId::TrainingRoom)) {
         c.damage += 0.02f * dt;
     }
-    if (tile && tile->terrain == static_cast<uint8_t>(TerrainId::Gold) &&
+    if (tile &&
+        structures::terrain_is_minable_id(static_cast<int>(tile->terrain)) &&
         c.gold_carried < c.max_gold && c.hunger < 80.0f) {
-        c.gold_carried += state_.config.mining_rate * dt;
+        const DK2TerrainDef* td = structures::terrain_for_engine_id(
+            static_cast<int>(tile->terrain));
+        float value = td ? float(structures::terrain_gold_value(td)) : 100.0f;
+        c.gold_carried += (value > 0.0f ? value : 1.0f) * 0.05f * dt;
         c.job = CreatureJob::Mine;
         if (c.gold_carried >= c.max_gold) {
             c.target_x = c.target_y = -1;
@@ -651,6 +693,11 @@ void Game::evaluate_triggers() {
 }
 
 void Game::step() {
+    grid_accumulator_ += kTickSeconds;
+    if (grid_ && grid_accumulator_ >= 0.049f) {
+        grid_->step();
+        grid_accumulator_ = 0.0f;
+    }
     if (spell_cooldown_left_ > 0)
         spell_cooldown_left_ = std::max(0.0f, spell_cooldown_left_ - kTickSeconds);
     evaluate_triggers();
@@ -703,33 +750,44 @@ bool Game::save(const std::string& path) const {
     h.creature_count = uint32_t(state_.creatures.size());
     h.room_count = uint32_t(state_.rooms.size());
     out.write(reinterpret_cast<const char*>(&h), sizeof(h));
-    for (const Tile& t : state_.world.tiles) {
-        uint32_t word = t.to_word();
-        out.write(reinterpret_cast<const char*>(&word), 4);
-    }
+
+    auto w32 = [&](uint32_t v) { out.write(reinterpret_cast<const char*>(&v), 4); };
+    auto wf = [&](float v) { out.write(reinterpret_cast<const char*>(&v), 4); };
+    auto wi = [&](int v) { out.write(reinterpret_cast<const char*>(&v), 4); };
+    auto ws = [&](const std::string& v) {
+        w32(uint32_t(v.size()));
+        if (!v.empty()) out.write(v.data(), std::streamsize(v.size()));
+    };
+
+    for (const Tile& t : state_.world.tiles) w32(t.to_word());
+
     for (const Creature& c : state_.creatures) {
-        out.write(reinterpret_cast<const char*>(&c.id), 4);
-        out.write(reinterpret_cast<const char*>(&c.species), 4);
-        out.write(reinterpret_cast<const char*>(&c.team), 4);
-        int state = static_cast<int>(c.state);
-        out.write(reinterpret_cast<const char*>(&state), 4);
-        out.write(reinterpret_cast<const char*>(&c.x), 4);
-        out.write(reinterpret_cast<const char*>(&c.y), 4);
-        out.write(reinterpret_cast<const char*>(&c.hp), 4);
-        out.write(reinterpret_cast<const char*>(&c.max_hp), 4);
-        out.write(reinterpret_cast<const char*>(&c.hunger), 4);
-        out.write(reinterpret_cast<const char*>(&c.fatigue), 4);
-        out.write(reinterpret_cast<const char*>(&c.gold_carried), 4);
+        wi(c.id); wi(c.species); wi(c.team); wi(int(c.state));
+        wi(int(c.job));
+        wf(c.x); wf(c.y); wf(c.damage); wf(c.speed); wf(c.sight);
+        wf(c.melee_range); wf(c.fear); wf(c.mood);
+        wf(c.hp); wf(c.max_hp); wf(c.hunger); wf(c.fatigue);
+        wf(c.gold_carried); wf(c.max_gold);
+        wi(c.target_x); wi(c.target_y); wi(int(c.path_index));
+        w32(uint32_t(c.path.size()));
+        for (int node : c.path) wi(node);
     }
     for (const Room& r : state_.rooms) {
-        out.write(reinterpret_cast<const char*>(&r.type), 4);
-        out.write(reinterpret_cast<const char*>(&r.x), 4);
-        out.write(reinterpret_cast<const char*>(&r.y), 4);
-        out.write(reinterpret_cast<const char*>(&r.owner), 4);
-        out.write(reinterpret_cast<const char*>(&r.integrity), 4);
+        wi(r.type); wi(r.x); wi(r.y); wi(r.owner); wf(r.integrity);
     }
-    out.write(reinterpret_cast<const char*>(&state_.economy.gold), 4);
-    out.write(reinterpret_cast<const char*>(&state_.elapsed), 4);
+    wf(state_.economy.gold);
+    wf(state_.mana); wf(state_.mana_max);
+    w32(uint32_t(state_.research.size()));
+    for (float v : state_.research) wf(v);
+    w32(uint32_t(state_.cooldowns.size()));
+    for (float v : state_.cooldowns) wf(v);
+    w32(uint32_t(state_.spells_known.size()));
+    for (uint8_t v : state_.spells_known) w32(v);
+    ws(state_.mission_name);
+    wi(int(state_.victory)); wi(int(state_.defeat));
+    wf(state_.camera.center_x); wf(state_.camera.center_y);
+    wf(state_.camera.zoom); wf(state_.camera.yaw); wf(state_.camera.pitch);
+    wf(state_.elapsed);
     uint64_t ticks = state_.tick_count;
     out.write(reinterpret_cast<const char*>(&ticks), 8);
     return out.good();
@@ -741,40 +799,57 @@ bool Game::load(const std::string& path) {
     SaveHeader h{};
     in.read(reinterpret_cast<char*>(&h), sizeof(h));
     if (!in || h.magic != kSaveMagic || h.version != kSaveVersion) return false;
+
+    auto r32 = [&](uint32_t& v) { in.read(reinterpret_cast<char*>(&v), 4); };
+    auto rf = [&](float& v) { in.read(reinterpret_cast<char*>(&v), 4); };
+    auto ri = [&](int& v) { in.read(reinterpret_cast<char*>(&v), 4); };
+    auto rs = [&](std::string& v) {
+        uint32_t n; r32(n);
+        if (n > 4096 || !in) { v.clear(); return; }
+        v.resize(n);
+        if (n) in.read(&v[0], std::streamsize(n));
+    };
+
     state_.world.width = int(h.world_w);
     state_.world.height = int(h.world_h);
     state_.world.tiles.resize(size_t(h.world_w) * h.world_h);
     for (Tile& t : state_.world.tiles) {
-        uint32_t word;
-        in.read(reinterpret_cast<char*>(&word), 4);
-        t = Tile::from_word(word);
+        uint32_t word; r32(word); t = Tile::from_word(word);
     }
     state_.creatures.resize(h.creature_count);
     for (Creature& c : state_.creatures) {
-        in.read(reinterpret_cast<char*>(&c.id), 4);
-        in.read(reinterpret_cast<char*>(&c.species), 4);
-        in.read(reinterpret_cast<char*>(&c.team), 4);
-        int state;
-        in.read(reinterpret_cast<char*>(&state), 4);
-        c.state = static_cast<CreatureState>(state);
-        in.read(reinterpret_cast<char*>(&c.x), 4);
-        in.read(reinterpret_cast<char*>(&c.y), 4);
-        in.read(reinterpret_cast<char*>(&c.hp), 4);
-        in.read(reinterpret_cast<char*>(&c.max_hp), 4);
-        in.read(reinterpret_cast<char*>(&c.hunger), 4);
-        in.read(reinterpret_cast<char*>(&c.fatigue), 4);
-        in.read(reinterpret_cast<char*>(&c.gold_carried), 4);
+        ri(c.id); ri(c.species); ri(c.team);
+        int v; ri(v); c.state = static_cast<CreatureState>(v);
+        ri(v); c.job = static_cast<CreatureJob>(v);
+        rf(c.x); rf(c.y); rf(c.damage); rf(c.speed); rf(c.sight);
+        rf(c.melee_range); rf(c.fear); rf(c.mood);
+        rf(c.hp); rf(c.max_hp); rf(c.hunger); rf(c.fatigue);
+        rf(c.gold_carried); rf(c.max_gold);
+        ri(c.target_x); ri(c.target_y); ri(v); c.path_index = v;
+        uint32_t n; r32(n);
+        c.path.clear();
+        if (n <= 100000) for (uint32_t i = 0; i < n; ++i) { ri(v); c.path.push_back(v); }
     }
     state_.rooms.resize(h.room_count);
     for (Room& r : state_.rooms) {
-        in.read(reinterpret_cast<char*>(&r.type), 4);
-        in.read(reinterpret_cast<char*>(&r.x), 4);
-        in.read(reinterpret_cast<char*>(&r.y), 4);
-        in.read(reinterpret_cast<char*>(&r.owner), 4);
-        in.read(reinterpret_cast<char*>(&r.integrity), 4);
+        ri(r.type); ri(r.x); ri(r.y); ri(r.owner); rf(r.integrity);
     }
-    in.read(reinterpret_cast<char*>(&state_.economy.gold), 4);
-    in.read(reinterpret_cast<char*>(&state_.elapsed), 4);
+    rf(state_.economy.gold);
+    rf(state_.mana); rf(state_.mana_max);
+    uint32_t n;
+    r32(n); state_.research.resize(n <= 1024 ? n : 0);
+    for (float& v : state_.research) rf(v);
+    r32(n); state_.cooldowns.resize(n <= 1024 ? n : 0);
+    for (float& v : state_.cooldowns) rf(v);
+    r32(n); state_.spells_known.resize(n <= 1024 ? n : 0);
+    for (uint8_t& v : state_.spells_known) { uint32_t x; r32(x); v = uint8_t(x); }
+    rs(state_.mission_name);
+    int flag;
+    ri(flag); state_.victory = flag != 0;
+    ri(flag); state_.defeat = flag != 0;
+    rf(state_.camera.center_x); rf(state_.camera.center_y);
+    rf(state_.camera.zoom); rf(state_.camera.yaw); rf(state_.camera.pitch);
+    rf(state_.elapsed);
     in.read(reinterpret_cast<char*>(&state_.tick_count), 8);
     state_.economy.recalculate(state_.world);
     next_creature_id_ = 1;

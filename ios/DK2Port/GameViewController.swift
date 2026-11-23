@@ -48,6 +48,8 @@ final class DK2GameViewController: UIViewController {
 
         installGestures(on: metalView)
 
+        installCommandObservers()
+
         displayLink = CADisplayLink(target: self, selector: #selector(frame(_:)))
         displayLink?.add(to: .main, forMode: .common)
     }
@@ -130,6 +132,58 @@ final class DK2GameViewController: UIViewController {
         let wx = cx + Float(point.x - view.bounds.midX) / (zoom * 28)
         let wy = cy + Float(point.y - view.bounds.midY) / (zoom * 28)
         bridge.selectWorldX(wx, y: wy)
+    }
+
+    private func installCommandObservers() {
+        let center = NotificationCenter.default
+        for name in DK2GameCommand.allNames {
+            center.addObserver(self, selector: #selector(handleCommand(_:)),
+                               name: name, object: nil)
+        }
+    }
+
+    @objc private func handleCommand(_ note: Notification) {
+        guard let info = note.userInfo as? [String: Any] else { return }
+        switch note.name {
+        case DK2GameCommand.build:
+            let category = info[DK2GameCommand.Key.category] as? String ?? "room"
+            let index = info[DK2GameCommand.Key.index] as? Int ?? 0
+            let cx = Int32(bridge.snapshot["centerX"] as? Float ?? 0)
+            let cy = Int32(bridge.snapshot["centerY"] as? Float ?? 0)
+            switch category {
+            case "trap":
+                _ = bridge.placeTrap(index, x: cx, y: cy, owner: 0)
+            case "door":
+                _ = bridge.placeDoor(index, x: cx, y: cy, owner: 0)
+            default:
+                _ = bridge.buildRoom(index, x: cx, y: cy, owner: 0)
+            }
+        case DK2GameCommand.spell:
+            let index = info[DK2GameCommand.Key.index] as? Int ?? 0
+            let cx = bridge.snapshot["centerX"] as? Float ?? 0
+            let cy = bridge.snapshot["centerY"] as? Float ?? 0
+            _ = bridge.castSpell(index, x: Int32(cx), y: Int32(cy))
+        case DK2GameCommand.creature:
+            let index = info[DK2GameCommand.Key.index] as? Int ?? 0
+            let cx = bridge.snapshot["centerX"] as? Float ?? 0
+            let cy = bridge.snapshot["centerY"] as? Float ?? 0
+            _ = bridge.spawnCreature(Int32(index), x: Int32(cx), y: Int32(cy), team: 0)
+        case DK2GameCommand.save:
+            if let slot = info[DK2GameCommand.Key.slot] as? String { saveGame(name: slot) }
+        case DK2GameCommand.load:
+            if let slot = info[DK2GameCommand.Key.slot] as? String { loadGame(name: slot) }
+        case DK2GameCommand.pause:
+            let paused = info[DK2GameCommand.Key.paused] as? Bool ?? false
+            displayLink?.isPaused = paused
+        case DK2GameCommand.speed:
+            let mult = info[DK2GameCommand.Key.multiplier] as? Int ?? 1
+            accumulator = 0
+            displayLink?.preferredFramesPerSecond = 60 * mult
+        case DK2GameCommand.quit:
+            displayLink?.invalidate()
+            displayLink = nil
+        default: break
+        }
     }
 
     func saveGame(name: String) {

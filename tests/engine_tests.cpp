@@ -138,6 +138,7 @@ int main(int argc, char** argv) {
                     int(combat.state().victory));
     }
 
+    game.set_mission("level1");
     const std::string save_path = "/tmp/dk2_engine_test.sav";
     CHECK(game.save(save_path));
     Game restored;
@@ -145,6 +146,10 @@ int main(int argc, char** argv) {
     CHECK(restored.state().world.width == game.state().world.width);
     CHECK(restored.state().creatures.size() == game.state().creatures.size());
     CHECK(std::fabs(restored.state().economy.gold - game.state().economy.gold) < 0.01f);
+    CHECK(std::fabs(restored.state().mana - game.state().mana) < 0.01f);
+    CHECK(restored.state().spells_known == game.state().spells_known);
+    CHECK(restored.state().mission_name == "level1");
+    CHECK(restored.state().creatures[0].job == game.state().creatures[0].job);
     std::remove(save_path.c_str());
 
     game.on_pan(10.f, -5.f);
