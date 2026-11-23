@@ -1,0 +1,30 @@
+name: Update STATUS
+
+# Regenerates STATUS.md whenever code is pushed to master, so the report
+# reflects work as it lands, not only successful IPA builds.
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-status:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Regenerate STATUS.md from status.json
+        run: |
+          set -euo pipefail
+          python3 tools/gen_status.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add STATUS.md
+          if git diff --cached --quiet; then
+            echo "STATUS.md unchanged"
+          else
+            git commit -m "chore: refresh STATUS.md [skip ci]"
+            git push origin HEAD:master
+          fi

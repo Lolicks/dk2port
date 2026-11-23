@@ -103,7 +103,8 @@ jobs:
           set -euo pipefail
           IPA=build/ipa/DK2Port.ipa
           if gh release view latest -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload latest "$IPA" --clobber -R "$GITHUB_REPOSITORY"
+            gh release upload latest "$IPA" --clobber -R "$GITHUB_REPOSITORY" \
+              ||             gh release upload latest "$IPA" --clobber -R "$GITHUB_REPOSITORY"
           else
             gh release create latest "$IPA" -R "$GITHUB_REPOSITORY" \
               --title "DK2Port — latest build" --generate-notes
