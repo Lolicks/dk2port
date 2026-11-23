@@ -9,7 +9,7 @@ import MetalKit
 /// the (silent, hard to debug) mismatch between the tile, mesh, particle and
 /// fog pipelines.
 enum DK2DepthSupport {
-    static let pixelFormat: MTLPixelFormat = .depth32float
+    static let pixelFormat: MTLPixelFormat = .depth32Float
 
     /// Must be called before the view creates its first depth texture.
     static func configureView(_ view: MTKView) {
