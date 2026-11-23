@@ -13,6 +13,8 @@ targets:
       - path: DK2Port
         excludes:
           - "DK2-Bridging-Header.h"
+          - "Assets/**"
+          - "Resources/**"
       - path: ../engine/DK2.cpp
       - path: ../engine/DK2.h
       - path: ../engine/GridSimulation.cpp
