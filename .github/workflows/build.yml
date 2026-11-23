@@ -108,3 +108,21 @@ jobs:
             gh release create latest "$IPA" -R "$GITHUB_REPOSITORY" \
               --title "DK2Port — latest build" --generate-notes
           fi
+      - name: Refresh STATUS.md and release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          export DK2_RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          export DK2_IPA_SIZE="$(stat -f%z ios/build/ipa/DK2Port.ipa)"
+          python3 tools/gen_status.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add STATUS.md
+          if git diff --cached --quiet; then
+            echo "STATUS.md unchanged"
+          else
+            git commit -m "chore: refresh STATUS.md [skip ci]"
+            git push origin HEAD:master
+          fi
+          gh release edit latest --notes-file STATUS.md -R "$GITHUB_REPOSITORY"
