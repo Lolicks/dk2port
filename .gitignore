@@ -28,3 +28,7 @@ __pycache__/
 re/ghidra/decomp/
 re/ghidra/asm/
 tmp/
+
+# Original game files (stored in private repo via Git LFS)
+!game/
+!game/**
