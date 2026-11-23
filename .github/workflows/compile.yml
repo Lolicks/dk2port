@@ -1,0 +1,30 @@
+name: Compile Check
+
+# Compile-only verification. NEVER archives, packages or publishes an IPA.
+# Runs on every push so Swift/Metal/ObjC++/C++ errors are caught early.
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  compile:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        working-directory: ios
+        run: xcodegen generate --spec project.yml
+      - name: Build for simulator (no IPA)
+        working-directory: ios
+        run: |
+          set -euo pipefail
+          xcodebuild -project DK2Port.xcodeproj -scheme DK2Port \
+            -configuration Debug -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build

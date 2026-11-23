@@ -1,8 +1,7 @@
 name: DK2Port CI
 
+# IPA builds are manual-only: run ONLY when the full port is declared ready.
 on:
-  push:
-  pull_request:
   workflow_dispatch:
 
 jobs:
@@ -40,6 +39,15 @@ jobs:
           cp -R game/Data ios/DK2Port/Resources/Original/Data
           python3 tools/import_assets.py --game-root game \
             --out ios/DK2Port/Resources/Assets --skip-audio
+          (cd decoder && ./build.sh)
+          python3 tools/kmsh_decompress.py batch game/Data/Meshes.WAD \
+            build/KMF --json > build/kmf_manifest.json
+          python3 tools/export_meshes.py
+          cp -R build/Assets/models ios/DK2Port/Resources/Assets/models
+          brew install ffmpeg
+          python3 tools/build_audio.py --game-root game \
+            --out build/Assets
+          cp -R build/Assets/audio ios/DK2Port/Resources/Assets/audio
           python3 tools/make_integrity.py ios/DK2Port/Resources \
             ios/DK2Port/Resources/Assets/integrity.json
           du -sh ios/DK2Port/Resources

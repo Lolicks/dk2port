@@ -60,7 +60,7 @@ final class DK2Atlas {
 
         func draw(_ name: String, at index: Int) {
             let path = assetRoot
-                .appendingPathComponent("textures/EngineTextures.WAD")
+                .appendingPathComponent("textures/EngineTextures")
                 .appendingPathComponent(name)
             guard let image = UIImage(contentsOfFile: path.path)?.cgImage else { return }
             let x = (index % 8) * cell
@@ -145,6 +145,15 @@ final class DK2MetalRenderer: NSObject, MTKViewDelegate {
             let pd = MTLRenderPipelineDescriptor()
             pd.vertexFunction = pl
             pd.fragmentFunction = pf
+            let vd = MTLVertexDescriptor()
+            vd.attributes[0].format = MTLVertexFormat.float4
+            vd.attributes[0].offset = 0
+            vd.attributes[0].bufferIndex = 0
+            vd.attributes[1].format = MTLVertexFormat.float4
+            vd.attributes[1].offset = 16
+            vd.attributes[1].bufferIndex = 0
+            vd.layouts[0].stride = 32
+            pd.vertexDescriptor = vd
             pd.colorAttachments[0].pixelFormat = metalView.colorPixelFormat
             pd.colorAttachments[0].isBlendingEnabled = true
             pd.colorAttachments[0].sourceRGBBlendFactor = .sourceAlpha
@@ -188,6 +197,7 @@ final class DK2MetalRenderer: NSObject, MTKViewDelegate {
                                        snap["centerY"] as? Float ?? 0)
         uniforms.zoom = snap["zoom"] as? Float ?? 1
         uniforms.yaw = snap["yaw"] as? Float ?? 0
+        uniforms.time = Float(Date().timeIntervalSince1970.truncatingRemainder(dividingBy: 1024.0))
     }
 
     private static func makeParticles(device: MTLDevice) -> MTLBuffer? {
@@ -230,6 +240,7 @@ final class DK2MetalRenderer: NSObject, MTKViewDelegate {
                            creatures: creatureData)
         if let pp = particlePipeline, let pb = particleBuffer {
             encoder.setRenderPipelineState(pp)
+            encoder.setVertexBytes(&uniforms, length: MemoryLayout<DK2Uniforms>.size, index: 0)
             encoder.setVertexBuffer(pb, offset: 0, index: 0)
             encoder.drawPrimitives(type: .point, vertexStart: 0, vertexCount: 64)
         }

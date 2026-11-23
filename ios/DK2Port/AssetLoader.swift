@@ -105,7 +105,13 @@ enum DK2AssetLoader {
     static var gameData: DK2GameData? { load(DK2GameData.self, "data/game_data.json") }
 
     static func mapURL(_ entry: DK2MapEntry) -> URL {
-        root.appendingPathComponent(entry.file)
+        var name = entry.file
+        if name.hasSuffix("Map.kld") {
+            name = String(name.dropLast("Map.kld".count))
+        } else if name.hasSuffix(".kld") {
+            name = String(name.dropLast(4))
+        }
+        return root.appendingPathComponent("maps/\(name).bin")
     }
 
     static func saveURL(name: String) -> URL {

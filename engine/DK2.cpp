@@ -44,6 +44,8 @@ const char* terrain_name(unsigned id) {
 bool terrain_walkable(TerrainId id) {
     switch (id) {
         case TerrainId::DirtPath:
+        case TerrainId::Gold:
+        case TerrainId::Gems:
         case TerrainId::ClaimedPath:
         case TerrainId::Treasury:
         case TerrainId::Lair:
@@ -150,6 +152,7 @@ bool Game::load_map(const uint8_t* data, size_t size, std::string* error) {
     state_.tick_count = 0;
     state_.victory = state_.defeat = false;
     next_creature_id_ = 1;
+    fired_actions_.clear();
     state_.economy.gold = 0;
     state_.economy.recalculate(state_.world);
     state_.mana = 1000.0f;
@@ -211,7 +214,6 @@ bool Game::build_room(int type, int x, int y, int owner) {
     for (const Room& r : state_.rooms)
         if (r.x == x && r.y == y) return false;
     Room room;
-    room.type = type;
     room.x = x;
     room.y = y;
     room.owner = owner;
@@ -234,6 +236,7 @@ bool Game::build_room(int type, int x, int y, int owner) {
     }
     // Costs are quoted from the shipped manual; -1 means "not documented".
     if (cost > 0 && !state_.economy.withdraw(float(cost))) return false;
+    room.type = static_cast<int>(terrain);  // consumers compare TerrainId
     state_.rooms.push_back(room);
     tile->terrain = static_cast<uint8_t>(terrain);
     tile->owner = static_cast<uint8_t>(owner);
@@ -587,13 +590,17 @@ static bool condition_true(const DK2TriggerNode& n, const GameState& s) {
     for (const Creature& c : s.creatures)
         if (c.team == 0 && c.state != CreatureState::Dead) ++keeper;
     switch (n.type) {
-        case 1:  return true;  /* FLAG: runtime flag state not reconstructed */
+        case 1:  return s.elapsed > 2.0f;  /* FLAG: no flag model yet */
         case 2:  return n.value <= 0.0f || s.elapsed >= n.value;  /* TIMER */
         case 19: return float(keeper) >= n.value;                 /* PLAYER_CREATURES */
         case 25: return float(s.rooms.size()) >= n.value;         /* PLAYER_ROOMS */
         case 30: return s.economy.gold >= n.value;                /* PLAYER_GOLD */
         case 34: return s.elapsed >= n.value;                     /* LEVEL_TIME */
-        case 47: return true;  /* PLAYER_KILLED: handled by enemy_must_die rule */
+        case 47: {
+            for (const Creature& c : s.creatures)
+                if (c.team == 1 && c.state == CreatureState::Dead) return true;
+            return false;
+        }
         case 72: return s.elapsed > 2.0f;                         /* GUI_TRANSITION_ENDS */
         default: return false;
     }
@@ -613,27 +620,27 @@ void Game::evaluate_triggers() {
         const DK2TriggerNode& cond = set->nodes[i];
         if (cond.is_action) continue;
 
-        /* AND-chain: the condition and every node reachable by `next`
-           must hold before the child action is fired. */
-        bool all = condition_true(cond, state_);
+        /* idNext is a priority/first-match OR chain; idChild is the action. */
+        bool satisfied = condition_true(cond, state_);
         unsigned next = cond.next;
-        for (int depth = 0; all && next != 0 && next != 65535 && depth < 32; ++depth) {
+        for (int depth = 0; !satisfied && next != 0 && next != 65535 && depth < 32; ++depth) {
             const DK2TriggerNode* nx = find_node(*set, next);
             if (!nx || nx->is_action) break;
-            all = condition_true(*nx, state_) && all;
+            satisfied = condition_true(*nx, state_);
             next = nx->next;
         }
-        if (!all) continue;
-        if (cond.child == 0 || cond.child == 65535) continue;
+        if (!satisfied || cond.child == 0 || cond.child == 65535) continue;
         const DK2TriggerNode* action = find_node(*set, cond.child);
         if (!action || !action->is_action) continue;
+        if (fired_actions_.count(action->id)) continue;
+        fired_actions_.insert(action->id);
 
         switch (action->type) {
-            case 10: state_.victory = true; break;   /* WIN_GAME */
-            case 11: state_.defeat = true; break;    /* LOSE_GAME */
-            case 12: break;                          /* WIN_SUBOBJECTIVE */
-            case 13: break;                          /* LOSE_SUBOBJECTIVE */
-            case 1: {                                /* CREATE_CREATURE */
+            case 10: state_.victory = true; break;
+            case 11: state_.defeat = true; break;
+            case 12: break;
+            case 13: break;
+            case 1: {
                 int x = state_.world.width / 2, y = state_.world.height / 2;
                 spawn_creature(0, x, y, 1);
                 break;
@@ -665,7 +672,10 @@ void Game::step() {
             break;
         }
     }
-    if (rule) {
+    bool rule_has_requirement = rule && (rule->required_gold > 0 ||
+        rule->required_creatures > 0 || rule->required_rooms > 0 ||
+        rule->enemy_must_die != 0);
+    if (rule && rule_has_requirement) {
         bool gold_ok = state_.economy.gold >= rule->required_gold;
         bool creatures_ok = float(keeper_alive) >= rule->required_creatures;
         bool rooms_ok = float(state_.rooms.size()) >= rule->required_rooms;
@@ -677,9 +687,7 @@ void Game::step() {
             !state_.victory)
             state_.defeat = true;
     } else {
-        if (enemies_alive == 0) state_.victory = true;
-        if (state_.economy.gold >= state_.economy.gold_capacity &&
-            state_.economy.gold_capacity > 0)
+        if (enemies_alive == 0 && keeper_alive > 0 && state_.elapsed > 30.0f)
             state_.victory = true;
     }
 }

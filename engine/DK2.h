@@ -5,6 +5,7 @@
 #include <functional>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace dk2 {
@@ -185,6 +186,7 @@ private:
     GameState state_;
     int next_creature_id_ = 1;
     float spell_cooldown_left_ = 0;
+    std::unordered_set<unsigned> fired_actions_;
     void update_creature(Creature& c);
 };
 

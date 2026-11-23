@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dk2port.local/schemas/audio_manifest.schema.json",
+  "title": "DK2Port runtime audio manifest",
+  "description": "Output of tools/build_audio.py at Assets/audio/manifest.json. One entry per SDT sample; path/wav_source are relative to --out (the Assets directory).",
+  "type": "object",
+  "required": ["schema", "version", "generator", "source", "policy", "tools", "counts", "total_bytes", "wav_cache_retained", "entries"],
+  "properties": {
+    "schema": { "const": "audio_manifest.schema.json" },
+    "version": { "const": 1 },
+    "generator": { "type": "string" },
+    "source": {
+      "type": "object",
+      "required": ["game_root", "sdt_dir", "banks", "samples"],
+      "properties": {
+        "game_root": { "type": "string" },
+        "sdt_dir": { "const": "Data/Sound/Sfx/Global" },
+        "banks": { "type": "integer", "minimum": 0 },
+        "samples": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": true
+    },
+    "policy": {
+      "type": "object",
+      "required": ["aac_bitrate", "critical_duration_s", "critical_name_keywords"],
+      "properties": {
+        "aac_bitrate": { "const": "192k" },
+        "critical_duration_s": { "const": 0.6 },
+        "critical_name_keywords": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": true
+    },
+    "tools": {
+      "type": "object",
+      "properties": {
+        "mpeg_decoder": { "$ref": "#/$defs/toolRecord" },
+        "ffmpeg": { "$ref": "#/$defs/toolRecord" },
+        "afconvert": { "$ref": "#/$defs/toolRecord" },
+        "used": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+      },
+      "additionalProperties": true
+    },
+    "counts": {
+      "type": "object",
+      "required": ["aac", "pcm16", "blank", "critical"],
+      "properties": {
+        "aac": { "type": "integer", "minimum": 0 },
+        "pcm16": { "type": "integer", "minimum": 0 },
+        "blank": { "type": "integer", "minimum": 0 },
+        "critical": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": true
+    },
+    "total_bytes": { "type": "integer", "minimum": 0 },
+    "wav_cache_retained": { "type": "boolean" },
+    "entries": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "toolRecord": {
+      "type": ["object", "null"],
+      "properties": {
+        "path": { "type": ["string", "null"] },
+        "version": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
+    "entry": {
+      "type": "object",
+      "required": ["id", "bank", "index", "codec", "rate", "path", "wav_source", "critical"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[^/]+/[0-9]{4}$",
+          "description": "Stable key '<SDT stem>/<sample index zero-padded to 4>', e.g. AmbienceHD/0007."
+        },
+        "bank": { "type": "string", "description": "SDT file stem." },
+        "index": { "type": "integer", "minimum": 0, "description": "Sample index inside the SDT bank." },
+        "name": { "type": "string" },
+        "codec": {
+          "enum": ["aac", "pcm16", "blank"],
+          "description": "Runtime artifact codec; 'blank' means no audio and path=null."
+        },
+        "source_codec": {
+          "type": "string",
+          "description": "Original SDT codec: mpeg-layer1, mpeg-layer2, pcm16le or empty/blank."
+        },
+        "rate": { "type": "integer", "minimum": 0, "description": "Effective sample rate in Hz." },
+        "channels": { "type": "integer", "minimum": 0 },
+        "duration_ms": { "type": "integer", "minimum": 0, "description": "Duration measured from the decoded WAV." },
+        "estimated_duration_ms": { "type": "integer", "minimum": 0, "description": "Metadata-only estimate used for classification." },
+        "path": {
+          "type": ["string", "null"],
+          "description": "Runtime artifact path relative to Assets, e.g. audio/AmbienceHD/s0007_wind.m4a."
+        },
+        "wav_source": {
+          "type": ["string", "null"],
+          "description": "Deterministic intermediate PCM WAV path under .wav-cache; regenerable and removed unless --keep-wavs."
+        },
+        "critical": {
+          "type": "boolean",
+          "description": "true = shipped as lossless PCM16 WAV; false = shipped as 192 kbps AAC."
+        },
+        "reason": { "type": "string" },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "source_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "output_sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" }
+      },
+      "additionalProperties": true
+    }
+  }
+}

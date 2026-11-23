@@ -11,11 +11,96 @@
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
+#include <cstdint>
+#include <sstream>
 #include <string>
+#include <vector>
 
 static NSError *DK2Error(NSString *domain, NSInteger code, NSString *text) {
     return [NSError errorWithDomain:domain code:code
                             userInfo:@{NSLocalizedDescriptionKey: text}];
+}
+
+/// Export ANIM frames into a private temporary directory and return the OBJ
+/// text for each frame. Shared by the text and binary entry points so the
+/// C decoder is only ever called from one place.
+static NSArray<NSData *> *DK2AnimOBJFrames(NSData *kmf, NSUInteger limit,
+                                           NSError **error) {
+    NSString *dir = [NSTemporaryDirectory() stringByAppendingPathComponent:
+        [NSString stringWithFormat:@"dk2anim_%u", arc4random()]];
+    [[NSFileManager defaultManager] createDirectoryAtPath:dir
+                              withIntermediateDirectories:YES
+                                               attributes:nil error:nil];
+    unsigned written = 0;
+    Dk2Result rc = dk2_anim_export(
+        static_cast<const uint8_t *>(kmf.bytes), kmf.length,
+        dir.UTF8String, static_cast<unsigned>(limit), &written);
+    if (rc != DK2_OK) {
+        [[NSFileManager defaultManager] removeItemAtPath:dir error:nil];
+        if (error) *error = DK2Error(@"DK2Decoder", rc, @"ANIM export failed");
+        return nil;
+    }
+    NSMutableArray *frames = [NSMutableArray arrayWithCapacity:written];
+    for (unsigned i = 0; i < written; ++i) {
+        NSString *name = [NSString stringWithFormat:@"frame_%04d.obj", i];
+        NSData *d = [NSData dataWithContentsOfFile:
+            [dir stringByAppendingPathComponent:name]];
+        if (d) [frames addObject:d];
+    }
+    [[NSFileManager defaultManager] removeItemAtPath:dir error:nil];
+    return frames;
+}
+
+/// Convert one exported frame into the compact binary layout documented in
+/// DK2DecoderBridge.h. Faces in the OBJ are already fully expanded triangles
+/// with one based indices; only position and face lines are needed here.
+static NSData *DK2BinaryFrameFromOBJ(NSData *obj) {
+    std::vector<float> pos;
+    std::vector<uint16_t> idx;
+    std::string text(static_cast<const char *>(obj.bytes), obj.length);
+    size_t start = 0;
+    while (start < text.size()) {
+        size_t end = text.find('\n', start);
+        if (end == std::string::npos) end = text.size();
+        std::string line = text.substr(start, end - start);
+        start = end + 1;
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (line.size() >= 2 && line[0] == 'v' &&
+            (line[1] == ' ' || line[1] == '\t')) {
+            float x = 0, y = 0, z = 0;
+            if (std::sscanf(line.c_str() + 2, "%f %f %f", &x, &y, &z) == 3) {
+                pos.push_back(x); pos.push_back(y); pos.push_back(z);
+            }
+        } else if (line.size() >= 2 && line[0] == 'f' &&
+                   (line[1] == ' ' || line[1] == '\t')) {
+            std::istringstream iss(line.substr(2));
+            std::string token;
+            while (iss >> token) {
+                size_t slash = token.find('/');
+                std::string number = (slash == std::string::npos)
+                    ? token : token.substr(0, slash);
+                int v = std::atoi(number.c_str());
+                if (v > 0) {
+                    uint32_t zeroBased = static_cast<uint32_t>(v - 1);
+                    idx.push_back(static_cast<uint16_t>(
+                        zeroBased > 65535u ? 65535u : zeroBased));
+                }
+            }
+        }
+    }
+    uint32_t vertexCount = static_cast<uint32_t>(pos.size() / 3);
+    uint32_t indexCount = static_cast<uint32_t>(idx.size());
+    const uint32_t magic = 0x46414B44u;
+    const uint32_t version = 1u;
+    NSMutableData *out = [NSMutableData dataWithCapacity:
+        16 + pos.size() * sizeof(float) + idx.size() * sizeof(uint16_t)];
+    [out appendBytes:&magic length:4];
+    [out appendBytes:&version length:4];
+    [out appendBytes:&vertexCount length:4];
+    [out appendBytes:&indexCount length:4];
+    if (!pos.empty()) [out appendBytes:pos.data() length:pos.size() * sizeof(float)];
+    if (!idx.empty()) [out appendBytes:idx.data() length:idx.size() * sizeof(uint16_t)];
+    return out;
 }
 
 @implementation DK2DecoderBridge
@@ -127,30 +212,24 @@ static NSError *DK2Error(NSString *domain, NSInteger code, NSString *text) {
 }
 
 + (NSArray<NSData *> *)animFrames:(NSData *)kmf
-                            limit:(NSUInteger)limit
-                            error:(NSError **)error {
-    NSString *dir = [NSTemporaryDirectory() stringByAppendingPathComponent:
-        [NSString stringWithFormat:@"dk2anim_%u", arc4random()]];
-    [[NSFileManager defaultManager] createDirectoryAtPath:dir
-                              withIntermediateDirectories:YES
-                                               attributes:nil error:nil];
-    unsigned written = 0;
-    Dk2Result rc = dk2_anim_export(
-        static_cast<const uint8_t *>(kmf.bytes), kmf.length,
-        dir.UTF8String, static_cast<unsigned>(limit), &written);
-    if (rc != DK2_OK) {
-        if (error) *error = DK2Error(@"DK2Decoder", rc, @"ANIM export failed");
-        return nil;
-    }
-    NSMutableArray *frames = [NSMutableArray array];
-    for (unsigned i = 0; i < written; ++i) {
-        NSString *name = [NSString stringWithFormat:@"frame_%04d.obj", i];
-        NSData *d = [NSData dataWithContentsOfFile:[dir stringByAppendingPathComponent:name]];
-        if (d) [frames addObject:d];
-    }
-    [[NSFileManager defaultManager] removeItemAtPath:dir error:nil];
-    return frames;
+                             limit:(NSUInteger)limit
+                             error:(NSError **)error {
+    return DK2AnimOBJFrames(kmf, limit, error);
 }
+
++ (NSArray<NSData *> *)animFrameBuffers:(NSData *)kmf
+                                  limit:(NSUInteger)limit
+                                  error:(NSError **)error {
+    NSArray<NSData *> *objFrames = DK2AnimOBJFrames(kmf, limit, error);
+    if (!objFrames) return nil;
+    NSMutableArray *buffers = [NSMutableArray arrayWithCapacity:objFrames.count];
+    for (NSData *frame in objFrames) {
+        NSData *binary = DK2BinaryFrameFromOBJ(frame);
+        if (binary) [buffers addObject:binary];
+    }
+    return buffers;
+}
+
 
 + (NSDictionary *)tgqInfo:(NSData *)tgq error:(NSError **)error {
     Dk2TgqInfo info;

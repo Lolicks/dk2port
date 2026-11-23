@@ -16,6 +16,9 @@
 | SDT / звук | Структура **решена**; MPEG Layer I / PCM | `WAD_FORMAT.md`, `OPENKEEPER_ANALYSIS.md` | 108 банков, 5512 сэмплов |
 | KWD / KLD | Контейнер решён, часть семантики неизвестна | `../KWD_FORMAT.md` | 46 существ, 66 карт |
 | Декомпиляция | 8260 функций, сопоставление выполнено | `DECOMPILED_FUNCTIONS.md` | см. документ |
+| AI существ (original) | Поля/адреса состояний восстановлены; алгоритм выбора работ — частично | `AI_FUNCTIONS.md` | дампы `FUN_00479200`/`FUN_00490240`, dispatch `FUN_00478800` |
+| Семантика триггеров | `idNext` = приоритетный OR, `idChild` = gating; зафиксировано | `TRIGGER_SEMANTICS.md`, `TRIGGERS_FORMAT.md` | OpenKeeper `TriggerLoader`/`TriggerControl` + `WorldTrigger.cpp` в бинарнике |
+| DK2 save format | **БЛОКЕР**: creature record не восстановлен | `SAVE_FORMAT.md` | нет `DK2S` в `DKII.EXE`, нет zlib, нет образцов сейвов |
 
 ## Ключевой результат
 
@@ -37,6 +40,12 @@ dk2-tools `wad_extract.1sc:74`.
 8. `DECODER_ARCHITECTURE.md` — архитектура независимого C-декодера.
 9. `IMPLEMENTATION_PLAN.md` — план по этапам.
 10. `REFERENCES.md` — все источники.
+11. `AI_FUNCTIONS.md` — оригинальный AI существ: поля, состояния, need'ы,
+    combat/path и отображение на `engine/DK2.cpp`.
+12. `TRIGGER_SEMANTICS.md` — точная семантика `next`/`child`, `repeat_times`,
+    comparison, flag/timer, text ids, AP, hero parties, camera paths.
+13. `SAVE_FORMAT.md` — попытка реконструкции DK2 save и точный блокер
+    creature record.
 
 ## Воспроизводимость
 

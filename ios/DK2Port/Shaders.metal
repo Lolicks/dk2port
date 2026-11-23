@@ -103,6 +103,16 @@ fragment float4 particle_fragment(ParticleOut in [[stage_in]]) {
     return in.color;
 }
 
+/* Original KMF geometry (static MESH or animated ANIM frames).
+   Layout is identical to DK2MeshUniforms on the Swift side (80 bytes). */
+struct MeshUniforms {
+    float4x4 viewProjection;
+    float time;
+    float pad0;
+    float pad1;
+    float pad2;
+};
+
 struct MeshVertexIn {
     float4 position [[attribute(0)]];
     float2 uv       [[attribute(1)]];
@@ -113,20 +123,25 @@ struct MeshOut {
     float2 uv;
 };
 
-/* Static KMF geometry: local XY plane, scaled and moved to the creature's
-   tile position. Uses the same camera uniforms as the tile renderer. */
+/* The exported KMF vertices use XY as the ground plane and Z as height
+   (negative in the source files, hence the negation). placement holds
+   xy = tile centre, z = uniform scale, w = atlas cell index. */
 vertex MeshOut mesh_vertex(
     MeshVertexIn in [[stage_in]],
-    constant Uniforms &u [[buffer(0)]],
-    constant float4 &placement [[buffer(1)]]) {  // xy = tile, z = scale, w = atlas cell
+    constant MeshUniforms &mu [[buffer(2)]],
+    constant float4 &placement [[buffer(1)]]) {
+    float3 local = in.position.xyz * placement.z;
+    float3 world = float3(placement.x + local.x,
+                          placement.y + local.y,
+                          -local.z);
     MeshOut out;
-    float2 local = in.position.xy * placement.z;
-    float2 p = local + placement.xy - u.center;
-    p *= u.zoom;
-    float c = cos(u.yaw), s = sin(u.yaw);
-    p = float2(p.x * c - p.y * s, p.x * s + p.y * c);
-    out.position = float4(p.x / (u.aspect * 13.0f), p.y / 13.0f, 0.0f, 1.0f);
-    out.uv = in.uv;
+    out.position = mu.viewProjection * float4(world, 1.0f);
+
+    // Same 8x8 atlas cell convention as instance_vertex; fract() keeps UVs
+    // from the original OBJ inside the cell.
+    uint cell = (uint)placement.w;
+    float2 cellXY = float2(float(cell % 8u), float(cell / 8u));
+    out.uv = (cellXY + fract(in.uv)) / 8.0f;
     return out;
 }
 

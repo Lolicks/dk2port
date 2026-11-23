@@ -1,8 +1,8 @@
 {
   "project": "Dungeon Keeper II — native iOS port",
   "repository": "https://github.com/Lolicks/dk2port",
-  "updated": "2026-11-23",
-  "verdict": "Build succeeds; the game is NOT complete and NOT verified on a device.",
+  "updated": "2026-11-24",
+  "verdict": "Full port in progress: exactness RE and systems work; IPA builds gated until completion.",
   "build": {
     "last_successful_run": "https://github.com/Lolicks/dk2port/actions/runs/45244837079",
     "ipa_size_bytes": 492544759,
@@ -17,25 +17,130 @@
     "note": "Installation and gameplay are verified by the user, not by CI."
   },
   "subsystems": [
-    {"name": "Original-game RE (formats, 8260 decompiled functions)", "state": "done", "evidence": "docs/REVERSE_ENGINEERING.md, re/ghidra/export_summary.txt"},
-    {"name": "WAD / DWFB container + KMSH decompressor", "state": "done", "evidence": "decoder/wad, decoder/kmsh; 2015/2015 meshes decode"},
-    {"name": "KMF v17 parser / mesh geometry", "state": "done", "evidence": "decoder/kmf; 2015/2015 parse, 862 MESH"},
-    {"name": "KWD/KLD game data, 13942 stat values", "state": "done", "evidence": "docs/stats.json, tools/stats_tool.py"},
-    {"name": "Mission triggers (9161 records, WIN/LOSE)", "state": "partial", "evidence": "docs/triggers.json; AND/OR chain semantics heuristic"},
-    {"name": "TGQ/TQI video decode in C", "state": "done", "evidence": "decoder/tqi; 10/10 frames byte-exact vs OpenKeeper"},
-    {"name": "EA XA ADPCM audio decode in C", "state": "done", "evidence": "decoder/audio; 3 movies byte-exact"},
-    {"name": "Embedded original resources in IPA", "state": "done", "evidence": "CI Verify IPA contents step; Original/Data inside app"},
-    {"name": "Automatic resource integrity check at launch", "state": "done", "evidence": "ios/DK2Port/ResourceManager.swift, Assets/integrity.json"},
-    {"name": "C++ core: fixed-step loop, A*, economy, combat, magic", "state": "partial", "evidence": "engine/DK2.cpp; simplified AI/combat vs original"},
-    {"name": "Metal tile renderer + touch camera controls", "state": "partial", "evidence": "MetalRenderer.swift; atlas path mismatch and static time are known bugs"},
-    {"name": "3D mesh rendering in iOS runtime", "state": "missing", "evidence": "DK2MeshRenderer.swift exists; OBJ not staged into IPA"},
-    {"name": "ANIM skeletal animation in iOS runtime", "state": "missing", "evidence": "C exporter only; no runtime playback"},
-    {"name": "Cutscene/video playback in iOS UI", "state": "missing", "evidence": "DK2CutscenePlayer.swift unused; TQI outputs PPM, no RGB texture path"},
-    {"name": "In-game audio (SDT -> AAC/PCM, positional mixer)", "state": "missing", "evidence": "CI uses --skip-audio; no audio.json in IPA"},
-    {"name": "Full FrontEnd UI (build/traps/doors/spells/creature panels)", "state": "missing", "evidence": "only menu + HUD exist"},
-    {"name": "Complete creature AI (jobs, moods, relations from KWD)", "state": "missing", "evidence": "basic needs/jobs only"},
-    {"name": "Original save-file compatibility", "state": "missing", "evidence": "custom DK2S v2; upstream creature block BROKEN"},
-    {"name": "Lighting, shadows, particles, water visual fidelity", "state": "missing", "evidence": "shader stubs only; time uniform not updated"},
-    {"name": "Optimization / streaming for iPhone 12 mini", "state": "missing", "evidence": "470 MiB bundle copied wholesale; no profiling on device"}
+    {
+      "name": "Original-game RE (formats, 8260 decompiled functions)",
+      "state": "done",
+      "evidence": "docs/REVERSE_ENGINEERING.md, re/ghidra/export_summary.txt"
+    },
+    {
+      "name": "WAD / DWFB container + KMSH decompressor",
+      "state": "done",
+      "evidence": "decoder/wad, decoder/kmsh; 2015/2015 meshes decode"
+    },
+    {
+      "name": "KMF v17 parser / mesh geometry",
+      "state": "done",
+      "evidence": "decoder/kmf; 2015/2015 parse, 862 MESH"
+    },
+    {
+      "name": "KWD/KLD game data, 13942 stat values",
+      "state": "done",
+      "evidence": "docs/stats.json, tools/stats_tool.py"
+    },
+    {
+      "name": "Mission triggers (9161 records, WIN/LOSE)",
+      "state": "partial",
+      "evidence": "docs/triggers.json; OR next-chain + fired-set in engine/DK2.cpp"
+    },
+    {
+      "name": "TGQ/TQI video decode in C",
+      "state": "done",
+      "evidence": "decoder/tqi; 10/10 frames byte-exact vs OpenKeeper"
+    },
+    {
+      "name": "EA XA ADPCM audio decode in C",
+      "state": "done",
+      "evidence": "decoder/audio; 3 movies byte-exact"
+    },
+    {
+      "name": "Embedded original resources in IPA",
+      "state": "done",
+      "evidence": "CI Verify IPA contents step; Original/Data inside app"
+    },
+    {
+      "name": "Automatic resource integrity check at launch",
+      "state": "done",
+      "evidence": "ios/DK2Port/ResourceManager.swift, Assets/integrity.json"
+    },
+    {
+      "name": "C++ core: fixed-step loop, A*, economy, combat, magic",
+      "state": "partial",
+      "evidence": "engine/DK2.cpp; instant-victory/mining/room-type/trigger-refire bugs fixed"
+    },
+    {
+      "name": "Metal tile renderer + touch camera controls",
+      "state": "partial",
+      "evidence": "MetalRenderer.swift; atlas path and time uniform fixed; compile-only check pending"
+    },
+    {
+      "name": "3D mesh rendering in iOS runtime",
+      "state": "partial",
+      "evidence": "DK2MeshRenderer/Shaders rewritten; models staging added to final-build workflow"
+    },
+    {
+      "name": "ANIM skeletal animation in iOS runtime",
+      "state": "partial",
+      "evidence": "DKAF frame buffers + DK2MeshStore; morph weights still simplified"
+    },
+    {
+      "name": "Cutscene/video playback in iOS UI",
+      "state": "missing",
+      "evidence": "DK2CutscenePlayer.swift unused; TQI outputs PPM, no RGB texture path"
+    },
+    {
+      "name": "In-game audio (SDT -> AAC/PCM, positional mixer)",
+      "state": "missing",
+      "evidence": "tools/build_audio.py ready (self-test OK); AAC artifacts produced in final build only"
+    },
+    {
+      "name": "Full FrontEnd UI (build/traps/doors/spells/creature panels)",
+      "state": "missing",
+      "evidence": "only menu + HUD exist"
+    },
+    {
+      "name": "Complete creature AI (jobs, moods, relations from KWD)",
+      "state": "missing",
+      "evidence": "basic needs/jobs only"
+    },
+    {
+      "name": "Original save-file compatibility",
+      "state": "missing",
+      "evidence": "custom DK2S v2; upstream creature block BROKEN"
+    },
+    {
+      "name": "Lighting, shadows, particles, water visual fidelity",
+      "state": "missing",
+      "evidence": "shader stubs only; time uniform not updated"
+    },
+    {
+      "name": "Optimization / streaming for iPhone 12 mini",
+      "state": "missing",
+      "evidence": "470 MiB bundle copied wholesale; no profiling on device"
+    },
+    {
+      "name": "Creature AI RE mapping from original functions",
+      "state": "partial",
+      "evidence": "docs/format-research/AI_FUNCTIONS.md; HIGH function attribution, job thresholds LOW"
+    },
+    {
+      "name": "Trigger semantics RE (next=OR, child=gating)",
+      "state": "partial",
+      "evidence": "docs/format-research/TRIGGER_SEMANTICS.md; MEDIUM confidence"
+    },
+    {
+      "name": "Original save format RE",
+      "state": "missing",
+      "evidence": "docs/format-research/SAVE_FORMAT.md; block unsolved, no sample saves"
+    },
+    {
+      "name": "Compile-only macOS verification",
+      "state": "done",
+      "evidence": ".github/workflows/compile.yml; no IPA produced"
+    },
+    {
+      "name": "IPA build gate (manual only, after full port)",
+      "state": "done",
+      "evidence": ".github/workflows/build.yml on: workflow_dispatch"
+    }
   ]
 }
