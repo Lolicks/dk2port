@@ -20,7 +20,7 @@ enum DK2OriginalAssets {
         return try? Data(contentsOf: url)
     }
 
-    static func wadInfo(_ name: String) -> NSDictionary? {
+    static func wadInfo(_ name: String) -> [AnyHashable: Any]? {
         guard let data = data("Data/\(name)") else { return nil }
         do { return try DK2DecoderBridge.wadInfo(data) } catch { return nil }
     }
@@ -45,7 +45,7 @@ enum DK2OriginalAssets {
         do { return try DK2DecoderBridge.animFrames(kmf, limit: UInt(limit)) } catch { return nil }
     }
 
-    static func movieInfo(_ name: String) -> NSDictionary? {
+    static func movieInfo(_ name: String) -> [AnyHashable: Any]? {
         guard let data = data("Data/Movies/\(name)") else { return nil }
         do { return try DK2DecoderBridge.tgqInfo(data) } catch { return nil }
     }

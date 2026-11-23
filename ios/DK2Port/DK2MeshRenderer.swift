@@ -26,12 +26,12 @@ final class DK2MeshRenderer {
         descriptor.vertexDescriptor = vertexDescriptor
         let layout = vertexDescriptor.layouts[0]!
         layout.stride = 24
-        layout.attributes[0].format = MTLVertexFormat.float4
-        layout.attributes[0].offset = 0
-        layout.attributes[0].bufferIndex = 0
-        layout.attributes[1].format = MTLVertexFormat.float2
-        layout.attributes[1].offset = 16
-        layout.attributes[1].bufferIndex = 0
+        vertexDescriptor.attributes[0].format = MTLVertexFormat.float4
+        vertexDescriptor.attributes[0].offset = 0
+        vertexDescriptor.attributes[0].bufferIndex = 0
+        vertexDescriptor.attributes[1].format = MTLVertexFormat.float2
+        vertexDescriptor.attributes[1].offset = 16
+        vertexDescriptor.attributes[1].bufferIndex = 0
 
         guard let pipeline = try? device.makeRenderPipelineState(descriptor: descriptor) else {
             return nil
