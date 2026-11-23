@@ -31,7 +31,6 @@ enum DK2DepthSupport {
         colorFormat: MTLPixelFormat
     ) -> MTLRenderPipelineDescriptor {
         descriptor.colorAttachments[0].pixelFormat = colorFormat
-        descriptor.depthStencilPixelFormat = pixelFormat
         return descriptor
     }
 

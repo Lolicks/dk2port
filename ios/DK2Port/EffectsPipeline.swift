@@ -239,7 +239,7 @@ final class DK2EffectsRenderer {
             descriptor.vertexDescriptor = vertexDescriptor
         }
 
-        let attachment = descriptor.colorAttachments[0]
+        let attachment = descriptor.colorAttachments[0]!
         switch blend {
         case .none:
             attachment.isBlendingEnabled = false
@@ -464,20 +464,20 @@ final class DK2EffectsRenderer {
         let depthBias = near * depthScale
 
         var projection = matrix_identity_float4x4
-        projection.columns[0] = SIMD4<Float>(focal / aspect, 0, 0, 0)
-        projection.columns[1] = SIMD4<Float>(0, focal, 0, 0)
-        projection.columns[2] = SIMD4<Float>(0, 0, depthScale, -1)
-        projection.columns[3] = SIMD4<Float>(0, 0, depthBias, 0)
+        projection.columns.0 = SIMD4<Float>(focal / aspect, 0, 0, 0)
+        projection.columns.1 = SIMD4<Float>(0, focal, 0, 0)
+        projection.columns.2 = SIMD4<Float>(0, 0, depthScale, -1)
+        projection.columns.3 = SIMD4<Float>(0, 0, depthBias, 0)
 
         let c = cos(uniforms.yaw), s = sin(uniforms.yaw)
         let ct = cos(tilt), st = sin(tilt)
         let cx = uniforms.center.x, cy = uniforms.center.y
 
         var view = matrix_identity_float4x4
-        view.columns[0] = SIMD4<Float>(c, -s * ct, s * st, 0)
-        view.columns[1] = SIMD4<Float>(s, c * ct, -c * st, 0)
-        view.columns[2] = SIMD4<Float>(0, st, ct, 0)
-        view.columns[3] = SIMD4<Float>(-(c * cx + s * cy),
+        view.columns.0 = SIMD4<Float>(c, -s * ct, s * st, 0)
+        view.columns.1 = SIMD4<Float>(s, c * ct, -c * st, 0)
+        view.columns.2 = SIMD4<Float>(0, st, ct, 0)
+        view.columns.3 = SIMD4<Float>(-(c * cx + s * cy),
                                        ct * (s * cx - c * cy),
                                        -st * (s * cx - c * cy) - cameraHeight,
                                        1)
