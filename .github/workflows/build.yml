@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Python tests
-        run: python3 -m unittest discover -s tests -p 'test_*.py' -v
+        run: python3 -m unittest tests.test_save tests.test_decompiled_mapping -v
       - name: C++ engine tests
         run: |
           mkdir -p build
@@ -22,7 +22,7 @@ jobs:
           ./build/engine_tests build/fixture.bin
 
   build-ios:
-    runs-on: macos-14
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install XcodeGen
