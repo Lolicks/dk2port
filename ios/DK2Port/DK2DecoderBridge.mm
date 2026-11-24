@@ -109,7 +109,7 @@ static NSData *DK2BinaryFrameFromOBJ(NSData *obj) {
 + (NSDictionary *)saveInfoAtPath:(NSString *)path error:(NSError **)error {
     dk2::save::SaveInfo info;
     std::string err;
-    if (!dk2::save::read_info(stdString(path), &info, &err)) {
+    if (!dk2::save::read_info(path.UTF8String ?: "", &info, &err)) {
         if (error) *error = [NSError errorWithDomain:@"DK2Save" code:1
             userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithUTF8String:err.c_str()]}];
         return nil;
