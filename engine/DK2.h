@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include <memory>
 #include "GridSimulation.h"
+#include "TriggerRuntime.h"
 #include <vector>
 
 namespace dk2 {
@@ -87,6 +88,37 @@ enum class CreatureJob {
     Lair, Prison, Torture, DisarmTrap, CombatPit, Gamble, ReturnToWork
 };
 
+// ImpJobData is the imp-only 11-field planner embedded in CState
+// (FUN_00479200, offsets +0x8a..+0xa7).  Names and offsets are HIGH confidence
+// (read from the original debug dump); the exact evaluation order is not.
+struct ImpJobData {
+    int task_id = -1;            // ImpTaskID (+0x8a)
+    int task_pos_x = -1;         // ImpTaskPositionX (+0x8c)
+    int task_pos_y = -1;         // ImpTaskPositionY (+0x90)
+    int task_surface = 0;        // ImpTaskSurface (+0x94)
+    int task_slot = -1;          // ImpTaskSlot (+0x96)
+    int last_task_type = 0;      // LastTaskType (+0x98)
+    bool just_dropped = false;   // JustDropped (+0x99)
+    int dropped_task = -1;       // DroppedTask (+0x9d)
+    int last_evaluate = -1;      // LastEvaluate (+0x9e, game tick)
+    bool scanning_job = false;   // ScanningJob (+0xa2)
+    int scanning_data = 0;       // ScanningData (+0xa3)
+};
+
+// Original CState::CurrentStateId values used by the FUN_00478800 dispatcher
+// and the utility-state switch of FUN_00479200 (HIGH: literal case labels).
+enum AiStateId : int {
+    kAiStateMoveTo            = 0x06,
+    kAiStateMoveToRoom        = 0x07,
+    kAiStateMoveWithinRange   = 0x08,
+    kAiStateMoveToForNTurns   = 0x09,
+    kAiStateWaitFor           = 0x58,
+    kAiStatePayNoPayRoom      = 0x37,  // PayState FUN_00472390, no pay room
+    kAiStateBattleSkip        = 0x16,  // DAT_006da8c7 override sentinel
+    kAiStateBattleAllowed1    = 0x0a,  // allowed when the battle flag is set
+    kAiStateBattleAllowed2    = 0x10,
+};
+
 // Anger is the original 6-value Anger struct (FUN_00487210).  Keeping the
 // legacy 0..100 `mood` field lets existing callers/UI keep working; mood is
 // derived as 100 - sum(anger_values).
@@ -130,6 +162,36 @@ struct Creature {
     int room_id = -1;
     bool lair_calculated = false;
     bool lair_availability = false;
+
+    // --- Additional CState fields (FUN_00479200) ---------------------------
+    int state_before_utility = 0;      // StateBeforeUtilityState (+0x40)
+    float suspend_time = 0.0f;         // SuspendTime (+0x44)
+    int pay_checked_time = -1;         // PayCheckedTime (+0x60)
+    int return_room_tag_id = -1;       // ReturnRoomTagId (+0x6c)
+    int initiated_end_of_level_gems = 0;  // InitiatedEndOfLevelGems (+0x72)
+    float data_started_at = 0.0f;      // Data.StartedAt (+0x76)
+    float data_timer_tick = 0.0f;      // Data.TimerTick (+0x7e)
+    int last_game_tick_interrupted = -1;  // Data.LastGameTickInterrupted (+0x82)
+    ImpJobData imp_job;                 // +0x8a..+0xa7 (11 fields)
+    int utility_new_state = 0;         // UtilityNewState (+0xdf)
+
+    // Utility-state parameters (+0xe3..+0xfd), read by the utility switch.
+    int move_to_x = -1, move_to_y = -1;        // MoveTo (+0xe3,+0xe7)
+    int room_id_state = -1;                    // RoomId (+0xe3, overlapped)
+    int room_type_id = 0;                      // RoomTypeId (+0xe5)
+    int move_to_room_x = -1, move_to_room_y = -1;  // MoveToRoom (+0xe6,+0xea)
+    int move_range_x = -1, move_range_y = -1;  // MoveWithinRangeOfThing (+0xe3,+0xe7)
+    int thing_id = -1;                         // ThingId (+0xef)
+    float range_squared = 0.0f;                // RangeSquared (+0xf1)
+    int recalc_nav_counter = 0;                // ReCalcNavCounter (+0xf5)
+    int move_turns_x = -1, move_turns_y = -1;  // MoveToForNTurns (+0xe3,+0xe7)
+    int turn_counter = 0;                      // TurnCounter (+0xef)
+    int wait_for = 0;                          // WaitFor (+0xe3)
+
+    // FUN_00478800 battle override: row selectors for DAT_006da8c7.
+    int battle_state_index = -1;   // creature +0x25e (first table row)
+    int battle_state_index2 = -1;  // creature +0x32d (secondary table row)
+    bool ai_battle_restricted = false;  // (*(+0x2a)+0x76)&4: only states 10/0x10
 
     // --- Growth / needs ---------------------------------------------------
     float xp = 0.0f;
@@ -179,11 +241,14 @@ struct Creature {
     int attack_type = 0;
     int spell_no = 0;
     float attack_range = 1.0f;
+    float attack_range_squared = 1.0f;  // Fight.AttackRangeSquared (+0x00)
     float backoff_timer = 0.0f;
     float fearless_until = 0.0f;
     int avoid_creature = -1;
     float avoid_counter = 0.0f;
     int retreating_creature = -1;
+    int creature_retreating_counter = 0;  // Fight +0x3f
+    int avoid_retreaters_counter = 0;     // Fight +0x40
     int melee_attackers[8]{-1, -1, -1, -1, -1, -1, -1, -1};
     int range_attackers[8]{-1, -1, -1, -1, -1, -1, -1, -1};
 
@@ -195,6 +260,10 @@ struct Creature {
     float last_reaction_time = -1.0e6f;
     int last_reaction_target = -1;
     float last_hello_time = -1.0e6f;
+    int trigger_root = -1;              // CThing.TriggerRoot (+0x419)
+    int trigger_root_repeat_count = -1; // CThing.TriggerRootRepeatCount (+0x4f9)
+    bool possessed = false;             // CCreature +0x3e6 bit 7
+    int victim_guard_warnings = 0;      // SelectAVictim assert/skip diagnostics
     bool call_to_arms_on = false;
     bool rebel_active = false;
     bool rebel_leader = false;
@@ -308,6 +377,7 @@ public:
     void on_zoom(float factor);
     void on_rotate(float delta);
     void select_at(float wx, float wy);
+    void slap_creature(int creature_id);  // player slap hook (LastSlapTick)
 
     int selected_creature = -1;
 
@@ -317,6 +387,7 @@ private:
     float spell_cooldown_left_ = 0;
     std::unordered_set<unsigned> fired_actions_;
     std::unique_ptr<GridSimulation> grid_;
+    std::unique_ptr<dk2trigger::TriggerRuntime> trigger_runtime_;
     float grid_accumulator_ = 0;
     uint32_t ai_rng_ = 0;
     bool initial_enemies_spawned_ = false;
@@ -324,6 +395,14 @@ private:
     void update_creature(Creature& c);
     void spawn_initial_enemies();
     void apply_anger(Creature& c, float amount, int source);
+    // Reconstructed AI sub-systems (see docs/format-research/AI_FUNCTIONS.md).
+    void update_needs(Creature& c);
+    void update_pay(Creature& c);
+    Creature* update_fight(Creature& c, int cx, int cy);
+    void choose_mood_job(Creature& c, int cx, int cy);
+    void update_imp_planner(Creature& c, int cx, int cy);
+    bool update_utility_path(Creature& c, int cx, int cy);
+    void update_creature_triggers(Creature& c, int cx, int cy);
 };
 
 // Fixed-timestep driver shared by iOS, macOS and the headless test harness.

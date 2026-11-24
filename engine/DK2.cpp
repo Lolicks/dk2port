@@ -7,6 +7,7 @@
 #include "Structures.h"
 #include "GridSimulation.h"
 #include "SaveFile.h"
+#include "TriggerRuntime.h"
 #include <ctime>
 #include <iterator>
 
@@ -223,9 +224,103 @@ static void unpack_extras(Creature& c, const SaveCreatureExtras& e) {
     c.death_timer = e.death_timer; c.decompose_value = e.decompose_value;
     c.lair_check_timer = e.lair_check_timer;
 }
+
+// Second, independently length-tagged trailer (v5 payload extension).  It is
+// appended after the original DK2E block, so old readers stop at DK2E and new
+// readers recognise DK2F when present.  Absence leaves every field at its
+// default: backward-safe in both directions.
+struct SaveCreatureExtras2 {
+    int state_before_utility; float suspend_time; int pay_checked_time;
+    int return_room_tag_id; int initiated_end_of_level_gems;
+    float data_started_at, data_timer_tick; int last_game_tick_interrupted;
+    // ImpJobData (11 fields, FUN_00479200 +0x8a..+0xa7)
+    int imp_task_id, imp_task_pos_x, imp_task_pos_y, imp_task_surface, imp_task_slot;
+    int imp_last_task_type, imp_just_dropped, imp_dropped_task;
+    int imp_last_evaluate, imp_scanning_job, imp_scanning_data;
+    int utility_new_state;
+    // Utility-state parameters
+    int move_to_x, move_to_y, room_id_state, room_type_id;
+    int move_to_room_x, move_to_room_y;
+    int move_range_x, move_range_y, thing_id; float range_squared; int recalc_nav_counter;
+    int move_turns_x, move_turns_y, turn_counter, wait_for;
+    // Battle override / restricted dispatch
+    int battle_state_index, battle_state_index2, ai_battle_restricted;
+    // Fight additions
+    float attack_range_squared; int creature_retreating_counter; int avoid_retreaters_counter;
+    // Per-creature triggers / victim guard diagnostics
+    int trigger_root, trigger_root_repeat_count, possessed, victim_guard_warnings;
+};
+
+static void pack_extras2(const Creature& c, SaveCreatureExtras2& e) {
+    e.state_before_utility = c.state_before_utility; e.suspend_time = c.suspend_time;
+    e.pay_checked_time = c.pay_checked_time; e.return_room_tag_id = c.return_room_tag_id;
+    e.initiated_end_of_level_gems = c.initiated_end_of_level_gems;
+    e.data_started_at = c.data_started_at; e.data_timer_tick = c.data_timer_tick;
+    e.last_game_tick_interrupted = c.last_game_tick_interrupted;
+    e.imp_task_id = c.imp_job.task_id; e.imp_task_pos_x = c.imp_job.task_pos_x;
+    e.imp_task_pos_y = c.imp_job.task_pos_y; e.imp_task_surface = c.imp_job.task_surface;
+    e.imp_task_slot = c.imp_job.task_slot; e.imp_last_task_type = c.imp_job.last_task_type;
+    e.imp_just_dropped = c.imp_job.just_dropped ? 1 : 0;
+    e.imp_dropped_task = c.imp_job.dropped_task;
+    e.imp_last_evaluate = c.imp_job.last_evaluate;
+    e.imp_scanning_job = c.imp_job.scanning_job ? 1 : 0;
+    e.imp_scanning_data = c.imp_job.scanning_data;
+    e.utility_new_state = c.utility_new_state;
+    e.move_to_x = c.move_to_x; e.move_to_y = c.move_to_y;
+    e.room_id_state = c.room_id_state; e.room_type_id = c.room_type_id;
+    e.move_to_room_x = c.move_to_room_x; e.move_to_room_y = c.move_to_room_y;
+    e.move_range_x = c.move_range_x; e.move_range_y = c.move_range_y;
+    e.thing_id = c.thing_id; e.range_squared = c.range_squared;
+    e.recalc_nav_counter = c.recalc_nav_counter;
+    e.move_turns_x = c.move_turns_x; e.move_turns_y = c.move_turns_y;
+    e.turn_counter = c.turn_counter; e.wait_for = c.wait_for;
+    e.battle_state_index = c.battle_state_index;
+    e.battle_state_index2 = c.battle_state_index2;
+    e.ai_battle_restricted = c.ai_battle_restricted ? 1 : 0;
+    e.attack_range_squared = c.attack_range_squared;
+    e.creature_retreating_counter = c.creature_retreating_counter;
+    e.avoid_retreaters_counter = c.avoid_retreaters_counter;
+    e.trigger_root = c.trigger_root; e.trigger_root_repeat_count = c.trigger_root_repeat_count;
+    e.possessed = c.possessed ? 1 : 0; e.victim_guard_warnings = c.victim_guard_warnings;
+}
+
+static void unpack_extras2(Creature& c, const SaveCreatureExtras2& e) {
+    c.state_before_utility = e.state_before_utility; c.suspend_time = e.suspend_time;
+    c.pay_checked_time = e.pay_checked_time; c.return_room_tag_id = e.return_room_tag_id;
+    c.initiated_end_of_level_gems = e.initiated_end_of_level_gems;
+    c.data_started_at = e.data_started_at; c.data_timer_tick = e.data_timer_tick;
+    c.last_game_tick_interrupted = e.last_game_tick_interrupted;
+    c.imp_job.task_id = e.imp_task_id; c.imp_job.task_pos_x = e.imp_task_pos_x;
+    c.imp_job.task_pos_y = e.imp_task_pos_y; c.imp_job.task_surface = e.imp_task_surface;
+    c.imp_job.task_slot = e.imp_task_slot; c.imp_job.last_task_type = e.imp_last_task_type;
+    c.imp_job.just_dropped = e.imp_just_dropped != 0;
+    c.imp_job.dropped_task = e.imp_dropped_task;
+    c.imp_job.last_evaluate = e.imp_last_evaluate;
+    c.imp_job.scanning_job = e.imp_scanning_job != 0;
+    c.imp_job.scanning_data = e.imp_scanning_data;
+    c.utility_new_state = e.utility_new_state;
+    c.move_to_x = e.move_to_x; c.move_to_y = e.move_to_y;
+    c.room_id_state = e.room_id_state; c.room_type_id = e.room_type_id;
+    c.move_to_room_x = e.move_to_room_x; c.move_to_room_y = e.move_to_room_y;
+    c.move_range_x = e.move_range_x; c.move_range_y = e.move_range_y;
+    c.thing_id = e.thing_id; c.range_squared = e.range_squared;
+    c.recalc_nav_counter = e.recalc_nav_counter;
+    c.move_turns_x = e.move_turns_x; c.move_turns_y = e.move_turns_y;
+    c.turn_counter = e.turn_counter; c.wait_for = e.wait_for;
+    c.battle_state_index = e.battle_state_index;
+    c.battle_state_index2 = e.battle_state_index2;
+    c.ai_battle_restricted = e.ai_battle_restricted != 0;
+    c.attack_range_squared = e.attack_range_squared;
+    c.creature_retreating_counter = e.creature_retreating_counter;
+    c.avoid_retreaters_counter = e.avoid_retreaters_counter;
+    c.trigger_root = e.trigger_root; c.trigger_root_repeat_count = e.trigger_root_repeat_count;
+    c.possessed = e.possessed != 0; c.victim_guard_warnings = e.victim_guard_warnings;
+}
+
 constexpr uint32_t kSaveMagic = 0x324b3244;  // "DK2S"
 constexpr uint32_t kSaveVersion = 4;
 constexpr uint32_t kSaveExtMagic = 0x454b3244;  // "DK2E" trailer
+constexpr uint32_t kSaveExtMagic2 = 0x464b3244;  // "DK2F" v5 extension trailer
 
 // AI flags recovered from the Creatures.kwd boolean fields.
 [[maybe_unused]] constexpr int kAIFlagWorker       = 1 << 0;
@@ -236,6 +331,84 @@ constexpr int kAIFlagFearless     = 1 << 2;
 [[maybe_unused]] constexpr int kAIFlagDeadBody     = 1 << 5;
 [[maybe_unused]] constexpr int kAIFlagUnique       = 1 << 6;
 [[maybe_unused]] constexpr int kAIFlagCanFly       = 1 << 7;
+
+// --- Reconstructed thresholds ------------------------------------------------
+// LOW confidence: these numbers were carried over from the previous build and
+// could not be tied to a specific decompiled constant/field.  They are kept
+// unchanged and reported as UNKNOWN in the reconstruction notes.
+constexpr float kHungerEatThreshold     = 60.0f;   // RECONSTRUCTION (UNKNOWN)
+constexpr float kNeedAngerThreshold     = 70.0f;   // RECONSTRUCTION (UNKNOWN)
+constexpr float kFatigueSleepThreshold  = 75.0f;   // RECONSTRUCTION (UNKNOWN)
+constexpr float kSleepNeedThreshold     = 60.0f;   // RECONSTRUCTION (UNKNOWN)
+constexpr float kNeedAngerAmount        = 0.01f;   // RECONSTRUCTION (UNKNOWN)
+constexpr float kNeedRetrySeconds       = 4.0f;    // RECONSTRUCTION (UNKNOWN)
+constexpr float kMoodRecoveryPerSecond  = 0.2f;    // RECONSTRUCTION (UNKNOWN)
+constexpr float kPayPeriodSeconds       = 10.0f;   // RECONSTRUCTION (UNKNOWN)
+constexpr int   kMaxPaymentAttempts     = 3;       // RECONSTRUCTION (UNKNOWN)
+constexpr float kIncomingThreatScale    = 0.02f;   // RECONSTRUCTION (UNKNOWN)
+constexpr float kFearDecayPerSecond     = 0.5f;    // RECONSTRUCTION (UNKNOWN)
+constexpr float kRetreatHpFraction      = 0.55f;   // RECONSTRUCTION (UNKNOWN)
+constexpr float kBackoffSeconds         = 2.0f;    // RECONSTRUCTION (UNKNOWN)
+constexpr int   kNavRecalcTicks         = 30;      // RECONSTRUCTION (UNKNOWN)
+constexpr float kHelloRange             = 1.5f;    // RECONSTRUCTION (UNKNOWN)
+constexpr float kHelloCooldownSeconds   = 5.0f;    // RECONSTRUCTION (UNKNOWN)
+
+// DAT_006da8c7 is a table with a 0x19-byte stride indexed by creature +0x25e;
+// a row value of 0x02 re-indexes the table with +0x32d, and a final value of
+// 0x16 suppresses state dispatch (00478800.c:8-17, HIGH for the control flow).
+// The original table bytes were not exported, so rows default to "no override"
+// (RECONSTRUCTION, UNKNOWN table contents).
+constexpr int kBattleTableRows = 32;
+static const uint8_t kBattleOverrideTable[kBattleTableRows] = {};
+
+static int battle_override_value(const Creature& c) {
+    int v = 0;
+    if (c.battle_state_index >= 0 && c.battle_state_index < kBattleTableRows)
+        v = kBattleOverrideTable[c.battle_state_index];
+    if (v == 0x02 && c.battle_state_index2 >= 0 && c.battle_state_index2 < kBattleTableRows)
+        v = kBattleOverrideTable[c.battle_state_index2];
+    return v;
+}
+
+// FUN_00478800: dispatch one CState id to its state process function.  The
+// individual process functions are attributed by source-path strings in
+// AI_FUNCTIONS.md §1; where a function maps to a physical state we set it here.
+static void dispatch_state(Creature& c, float now) {
+    if (battle_override_value(c) == kAiStateBattleSkip)
+        return;  // global battle override: dispatch skipped (return 0)
+    const int sid = c.state_id;
+    // Restricted battle branch (00478800.c:108-120): only ids 10 and 0x10 run.
+    if (c.ai_battle_restricted && sid != kAiStateBattleAllowed1 &&
+        sid != kAiStateBattleAllowed2)
+        return;
+
+    CreatureState physical = c.state;
+    bool recognized = true;
+    switch (sid) {
+        case 1: case 2: case 3: case 4: case 5: break;
+        case 6:  physical = CreatureState::Walking; break;  // MoveTo
+        case 7:  physical = CreatureState::Walking; break;  // MoveToRoom
+        case 8:  physical = CreatureState::Walking; break;  // MoveWithinRangeOfThing
+        case 9:  physical = CreatureState::Walking; break;  // MoveToForNTurns
+        case 10: break;                                     // battle-allowed
+        case 11: physical = CreatureState::Fighting; break;
+        case 12: case 13: case 14: case 15: break;
+        case 16: break;                                     // battle-allowed
+        case 17: case 18: case 19: break;
+        case 20: break;                                     // 0x14: no handler
+        case 22: case 23: break;
+        case 24: physical = CreatureState::Exploring; break; // Explore (0045a290)
+        case 25: case 26: case 27: case 28: break;
+        case kAiStatePayNoPayRoom: physical = CreatureState::Paying; break;
+        default: recognized = false; break;
+    }
+    if (recognized) {
+        if (physical != c.state && c.state != CreatureState::Walking &&
+            c.state != CreatureState::Dead && c.state != CreatureState::InHand)
+            c.state = physical;
+        c.state_tick_last_updated = now;
+    }
+}
 
 // Generated from docs/stats.json (Creatures.kwd); see AI_FUNCTIONS.md.
 struct DK2CreatureAIStat {
@@ -378,6 +551,18 @@ static float anger_total(const Creature& c) {
     float total = 0.0f;
     for (float v : c.anger_values) total += v;
     return total;
+}
+
+static void grant_xp(Creature& c, float amount) {
+    if (amount <= 0.0f) return;
+    c.xp += amount;
+    while (c.xp >= c.exp_for_next_level) {
+        c.xp -= c.exp_for_next_level;
+        ++c.level;
+        c.max_hp *= 1.05f;
+        c.hp = std::min(c.max_hp, c.hp + c.max_hp * 0.05f);
+        c.mood = std::min(100.0f, c.mood + 5.0f);
+    }
 }
 
 // Resistances.kwd-style damage reduction from the creature's recovered
@@ -570,6 +755,7 @@ bool Game::load_map(const uint8_t* data, size_t size, std::string* error) {
     initial_enemies_spawned_ = false;
     pay_period_timer_ = 0.0f;
     ai_rng_ = 0x51ed270bU;
+    trigger_runtime_.reset();
     grid_.reset(new GridSimulation(state_.world.width, state_.world.height));
     grid_accumulator_ = 0;
     state_.economy.gold = 0;
@@ -600,6 +786,15 @@ void Game::set_mission(const std::string& name) {
     uint32_t seed = 0x9e3779b9U;
     for (char ch : name) seed = mix32(seed ^ uint32_t(static_cast<uint8_t>(ch)));
     ai_rng_ = seed;
+    trigger_runtime_.reset();
+    for (unsigned i = 0; i < kDK2MissionTriggerCount; ++i) {
+        if (name == kDK2MissionTriggers[i].map) {
+            const DK2MissionTriggers* set = &kDK2MissionTriggers[i];
+            trigger_runtime_.reset(new dk2trigger::TriggerRuntime(
+                *set, dk2trigger::TriggerRuntime::deriveRoots(*set)));
+            break;
+        }
+    }
 }
 
 int Game::spawn_creature(int species, int x, int y, int team) {
@@ -924,6 +1119,500 @@ static bool find_room_tile(const std::vector<Room>& rooms,
     return true;
 }
 
+void Game::update_needs(Creature& c) {
+    // Hunger: the KWD hunger_rate is a period in ticks; 32767 means "never
+    // hungry" (AI_FUNCTIONS.md §5.2 / kDK2CreatureAIStats).
+    const bool never_hungry = c.hunger_rate >= 32767.0f;
+    if (!never_hungry && c.hunger_rate > 0.0f)
+        c.hunger = std::min(100.0f, c.hunger +
+            std::min(10.0f, 1000.0f / c.hunger_rate) * kTickSeconds);
+    else if (!never_hungry)
+        c.hunger = std::min(100.0f, c.hunger + state_.config.hunger_rate * kTickSeconds);
+
+    // SleepNeeded is gated by time_awake (32767 = never needs sleep).
+    if (c.time_awake > 0.0f && c.time_awake < 32767.0f &&
+        c.time_awake_elapsed > c.time_awake)
+        c.sleep_need = std::min(100.0f, c.sleep_need + 2.0f * kTickSeconds);
+    c.fatigue = std::min(100.0f, c.fatigue + state_.config.fatigue_rate * kTickSeconds);
+
+    if (c.hunger > kNeedAngerThreshold || c.fatigue > kNeedAngerThreshold ||
+        c.sleep_need > kNeedAngerThreshold)
+        apply_anger(c, kNeedAngerAmount, 1);
+    else
+        c.mood = std::min(100.0f, c.mood + kMoodRecoveryPerSecond * kTickSeconds);
+
+    // HungerNeed/LastAttemptedHunger and SleepNeeded/LastAttemptedSleep
+    // (CState +0x4c/+0x50 and +0x58/+0x5c): stamp a throttled attempt when the
+    // need is high but no satisfying room exists.
+    if (c.hunger > kHungerEatThreshold &&
+        room_tiles_of_type(state_, int(TerrainId::Hatchery)) == 0 &&
+        state_.elapsed - c.last_attempt_hunger > kNeedRetrySeconds)
+        c.last_attempt_hunger = state_.elapsed;
+    if (c.sleep_need > kSleepNeedThreshold &&
+        room_tiles_of_type(state_, int(TerrainId::Lair)) == 0 &&
+        state_.elapsed - c.last_attempt_sleep > kNeedRetrySeconds)
+        c.last_attempt_sleep = state_.elapsed;
+}
+
+void Game::update_pay(Creature& c) {
+    c.pay_timer += kTickSeconds;
+    c.pay_checked_time = int(state_.tick_count);  // CState.PayCheckedTime +0x60
+    if (c.pay_timer < kPayPeriodSeconds) return;
+    c.pay_timer = 0.0f;
+    if (c.team == 0 && c.pay > 0.0f) {
+        if (c.skip_next_payment) {
+            c.skip_next_payment = false;
+            c.get_paid = true;
+            c.payment_needed = 0.0f;
+            c.payment_attempts = 0;
+        } else if (state_.economy.withdraw(c.pay)) {
+            c.get_paid = true;
+            c.payment_needed = 0.0f;
+            c.payment_attempts = 0;
+            c.mood = std::min(100.0f, c.mood + 2.0f);  // RECONSTRUCTION (UNKNOWN)
+        } else {
+            c.get_paid = false;
+            c.payment_needed += c.pay;
+            ++c.payment_attempts;
+            apply_anger(c, c.anger_no_pay, 2);
+            if (c.path.empty()) set_job(c, CreatureJob::Pay, state_.elapsed);
+            // PayState FUN_00472390: no reachable pay room -> state 0x37.
+            // Set last so set_job() does not overwrite it with the job id.
+            if (room_tiles_of_type(state_, int(TerrainId::Treasury)) == 0)
+                c.state_id = kAiStatePayNoPayRoom;
+            if (c.payment_attempts >= kMaxPaymentAttempts) {
+                c.rebel_active = true;
+                apply_anger(c, c.anger_no_pay * 2.0f, 4);
+            }
+        }
+    } else {
+        c.get_paid = true;  // heroes are paid by their own portal
+    }
+}
+
+Creature* Game::update_fight(Creature& c, int cx, int cy) {
+    (void)cx; (void)cy;
+    const float dt = kTickSeconds;
+    Creature* enemy = nullptr;
+    float best_d2 = c.sight * c.sight;
+    if (c.attacking_id >= 0) {
+        for (Creature& other : state_.creatures) {
+            if (other.id != c.attacking_id || other.state == CreatureState::Dead) continue;
+            float dx = other.x - c.x, dy = other.y - c.y;
+            if (dx * dx + dy * dy <= c.sight * c.sight) {
+                enemy = &other;
+                best_d2 = dx * dx + dy * dy;
+            } else {
+                c.attacking_id = -1;
+            }
+            break;
+        }
+    }
+    if (!enemy) {
+        // SelectAVictim guards (0045cb00.c:52-66).  The original reports these
+        // through FUN_00634db0 (a diagnostic assert), so they are recorded as
+        // warnings rather than aborting target selection.
+        if (c.possessed) ++c.victim_guard_warnings;
+        const bool fighter = (c.ai_flags & kAIFlagFearless) || c.fight_style > 0;
+        if (!fighter) ++c.victim_guard_warnings;
+        if (c.attacking_id >= 0) ++c.victim_guard_warnings;
+        for (Creature& other : state_.creatures) {
+            if (other.team == c.team || other.state == CreatureState::Dead) continue;
+            if (c.state == CreatureState::InHand ||
+                (c.job == CreatureJob::Fight && c.attacking_id >= 0)) continue;
+            float dx = other.x - c.x, dy = other.y - c.y;
+            float d2 = dx * dx + dy * dy;
+            if (d2 <= c.melee_range * c.melee_range) { enemy = &other; best_d2 = d2; break; }
+            if (d2 < best_d2) { best_d2 = d2; enemy = &other; }
+        }
+        if (enemy) {
+            c.attacking_id = enemy->id;
+            c.last_reaction_time = state_.elapsed;
+            c.last_reaction_target = enemy->id;
+        }
+    }
+
+    // Fight struct (FUN_004915d0): up to 8 ranged + 8 melee attackers tracked.
+    for (int i = 0; i < 8; ++i) {
+        c.melee_attackers[i] = -1;
+        c.range_attackers[i] = -1;
+    }
+    int melee_n = 0, range_n = 0;
+    for (const Creature& other : state_.creatures) {
+        if (&other == &c || other.state == CreatureState::Dead ||
+            other.team == c.team || other.attacking_id != c.id) continue;
+        float dx = other.x - c.x, dy = other.y - c.y;
+        float d2 = dx * dx + dy * dy;
+        if (d2 <= other.melee_range * other.melee_range) {
+            if (melee_n < 8) c.melee_attackers[melee_n++] = other.id;
+        } else if (d2 <= other.sight * other.sight) {
+            if (range_n < 8) c.range_attackers[range_n++] = other.id;
+        }
+    }
+    float incoming_threat = 0.0f;
+    for (int i = 0; i < 8 && c.melee_attackers[i] >= 0; ++i)
+        for (const Creature& other : state_.creatures)
+            if (other.id == c.melee_attackers[i]) incoming_threat += other.threat;
+    for (int i = 0; i < 8 && c.range_attackers[i] >= 0; ++i)
+        for (const Creature& other : state_.creatures)
+            if (other.id == c.range_attackers[i]) incoming_threat += other.threat * 0.5f;
+    if (enemy) incoming_threat = std::max(incoming_threat, enemy->threat);
+    // ThreatThingThreshold is derived from stats/level (0045f030 warning).
+    const float threshold = std::max(c.threat_threshold, c.fear);
+    c.temp_fear = std::max(0.0f, c.temp_fear +
+        incoming_threat * kIncomingThreatScale * dt - kFearDecayPerSecond * dt);
+    c.current_fear = std::max(c.current_fear, c.temp_fear);
+    c.attack_range_squared = c.melee_range * c.melee_range;
+    if (enemy) {
+        c.threat_thing = enemy->id;
+        c.threat_threshold = threshold;
+    }
+    // AvoidCreature / AvoidCounter (Fight +0x39/+0x3b).
+    if (c.avoid_creature >= 0) {
+        for (const Creature& other : state_.creatures) {
+            if (other.id == c.avoid_creature && other.state != CreatureState::Dead) {
+                c.avoid_counter = std::min(100.0f, c.avoid_counter + dt);
+                incoming_threat += other.threat;
+                break;
+            }
+        }
+        if (c.avoid_counter <= 0.0f) c.avoid_creature = -1;
+    }
+
+    const bool outnumbered = (melee_n + range_n) > 1;
+    const bool already_fleeing = c.job == CreatureJob::Flee && c.backoff_timer > 0.0f;
+    const bool overwhelmed = enemy && (already_fleeing || c.backoff_timer <= 0.0f) &&
+        state_.elapsed >= c.fearless_until &&
+        !(c.ai_flags & kAIFlagFearless) &&
+        (c.current_fear > threshold || outnumbered) &&
+        (c.hp < c.max_hp * kRetreatHpFraction || outnumbered);
+    if (overwhelmed) {
+        if (c.job != CreatureJob::Flee) c.return_job_id = c.current_job_id;
+        set_job(c, CreatureJob::Flee, state_.elapsed);
+        float ax = c.x - enemy->x, ay = c.y - enemy->y;
+        float len = std::max(0.0001f, std::sqrt(ax * ax + ay * ay));
+        c.target_x = std::max(0, std::min(state_.world.width - 1,
+                                         int(c.x - ax / len * 4.0f)));
+        c.target_y = std::max(0, std::min(state_.world.height - 1,
+                                         int(c.y - ay / len * 4.0f)));
+        c.path.clear();
+        c.path_index = 0;
+        c.state = CreatureState::Walking;
+        c.backoff_timer = kBackoffSeconds;
+        c.retreating_creature = enemy->id;
+        c.creature_retreating_counter = 1;
+        c.avoid_creature = enemy->id;
+        c.avoid_counter = kBackoffSeconds;
+        ++c.overthreat_counter;
+        apply_anger(c, 1.0f, 1);
+    } else if (enemy && best_d2 <= c.melee_range * c.melee_range) {
+        set_job(c, CreatureJob::Fight, state_.elapsed);
+        c.state = CreatureState::Fighting;
+        c.attack_type = 1;
+        if (c.attack_cooldown <= 0.0f) {
+            enemy->hp -= c.damage * resistance_factor(*enemy, c.attack_type);
+            c.attack_cooldown = std::max(0.1f, c.melee_recharge);
+            enemy->current_fear = std::max(enemy->current_fear, c.threat * 0.05f);
+            grant_xp(c, c.damage * 0.05f);
+        }
+        apply_anger(*enemy, 1.0f, 1);
+    }
+
+    if (enemy && enemy->state != CreatureState::Dead && c.creature_spell_cooldown <= 0.0f) {
+        float dist = std::sqrt(best_d2);
+        for (int i = 0; i < 3; ++i) {
+            int sid = c.spell_id[i];
+            if (sid <= 0 || sid >= 42 || c.level < c.spell_level[i]) continue;
+            float range = kCreatureSpellRange[sid] > 0.0f
+                              ? kCreatureSpellRange[sid] : c.melee_range;
+            if (dist > range) continue;
+            bool healing = (sid == 14 || sid == 20 || sid == 32);
+            bool self_buff = (sid == 13 || sid == 15 || sid == 16 || sid == 17 ||
+                              sid == 21 || sid == 22 || sid == 33 || sid == 36 || sid == 37);
+            if (healing) {
+                c.hp = std::min(c.max_hp, c.hp + c.max_hp * 0.2f);
+            } else if (self_buff) {
+                if (sid == 13 || sid == 21 || sid == 37)
+                    c.speed = std::min(4.0f, c.speed * 1.15f);
+                else if (sid == 36) {
+                    ai_rng_ = mix32(ai_rng_ ^ uint32_t(c.id));
+                    int nx = std::max(0, std::min(state_.world.width - 1,
+                        int(c.x) + int(ai_rng_ % 9U) - 4));
+                    int ny = std::max(0, std::min(state_.world.height - 1,
+                        int(c.y) + int((ai_rng_ >> 7) % 9U) - 4));
+                    if (state_.world.walkable(nx, ny)) {
+                        c.x = float(nx) + 0.5f;
+                        c.y = float(ny) + 0.5f;
+                        c.path.clear();
+                    }
+                } else
+                    c.fearless_until = state_.elapsed + 10.0f;
+            } else {
+                enemy->hp -= c.damage * (0.5f + 0.1f * float(c.level)) *
+                             (1.0f + 0.1f * float(c.fight_style)) *
+                             resistance_factor(*enemy, c.spell_no);
+            }
+            c.creature_spell_cooldown = std::max(2.0f, kCreatureSpellRecharge[sid]);
+            c.active_creature_spell = sid;
+            c.spell_no = sid;
+            grant_xp(c, 5.0f);
+            break;
+        }
+    }
+    if (enemy && enemy->hp <= 0.0f) {
+        enemy->hp = 0.0f;
+        enemy->state = CreatureState::Dead;
+        enemy->death_timer = 0.0f;
+        enemy->attacking_id = -1;
+        c.attacking_id = -1;
+        c.mood = std::min(100.0f, c.mood + 6.0f);
+        grant_xp(c, std::max(20.0f, enemy->max_hp * 0.05f));
+    }
+    return enemy;
+}
+
+void Game::update_imp_planner(Creature& c, int cx, int cy) {
+    // Imps have their own 11-field planner (FUN_00479200 +0x8a..+0xa7) and do
+    // not use the shared mood job table.  Re-evaluation period is UNKNOWN.
+    if (c.species != 0) return;
+    if (c.attacking_id >= 0 || c.job == CreatureJob::Fight ||
+        c.job == CreatureJob::Flee)
+        return;  // combat takes precedence over imp work planning
+    if (c.hunger > kHungerEatThreshold || c.fatigue > kFatigueSleepThreshold ||
+        c.sleep_need > kSleepNeedThreshold)
+        return;  // immediate needs take precedence
+    constexpr int kImpReevaluateTicks = 30;  // RECONSTRUCTION (UNKNOWN)
+    ImpJobData& p = c.imp_job;
+    if (p.just_dropped) {
+        p.dropped_task = p.task_id;
+        p.just_dropped = false;
+    }
+    if (p.last_evaluate >= 0 &&
+        int(state_.tick_count) - p.last_evaluate < kImpReevaluateTicks)
+        return;
+    p.last_evaluate = int(state_.tick_count);
+    p.scanning_job = true;
+    int tx = -1, ty = -1;
+    int wanted = static_cast<int>(TerrainId::Gold);
+    bool have = find_room_tile(state_.rooms, wanted, cx, cy, tx, ty);
+    if (!have) {
+        for (size_t i = 0; i < state_.world.tiles.size(); ++i) {
+            if (state_.world.tiles[i].terrain == uint8_t(TerrainId::Gold)) {
+                tx = int(i % state_.world.width);
+                ty = int(i / state_.world.width);
+                have = true;
+                break;
+            }
+        }
+    }
+    if (have) {
+        p.task_id = 24;  // haul/mine worker task id
+        p.task_pos_x = tx;
+        p.task_pos_y = ty;
+        p.task_surface = 0;
+        p.task_slot = -1;
+        p.last_task_type = 24;
+    } else {
+        p.task_id = -1;
+        p.scanning_data = 0;
+    }
+    p.scanning_job = false;
+    if (p.task_id >= 0 && c.path.empty() && c.target_x < 0) {
+        c.move_to_x = p.task_pos_x;
+        c.move_to_y = p.task_pos_y;
+        c.state_id = kAiStateMoveTo;
+    }
+}
+
+void Game::choose_mood_job(Creature& c, int cx, int cy) {
+    (void)cx; (void)cy;
+    if (!c.possessed && c.job == CreatureJob::Fight && c.path.empty())
+        set_job(c, CreatureJob::Idle, state_.elapsed);
+    if (c.job == CreatureJob::Fight || c.job == CreatureJob::Flee) return;
+
+    // Three independent per-tick "successfully chose a job" flags
+    // (FUN_00479200 +0xf9 happy / +0xfd unhappy / +0x101 angry).  A rank that
+    // already succeeded this tick is not asked to choose again.
+    const int tick = int(state_.tick_count);
+    const bool rank_available[3] = {
+        c.last_happy_chosen_tick != tick,
+        c.last_hunger_chosen_tick != tick,
+        c.last_angry_chosen_tick != tick,
+    };
+
+    if (c.species == 0) update_imp_planner(c, cx, cy);
+
+    if (c.rebel_active && c.anger_state >= 2) {
+        if (c.path.empty()) set_job(c, CreatureJob::Rebel, state_.elapsed);
+    } else if (!c.get_paid && c.payment_needed > 0.0f && c.path.empty()) {
+        set_job(c, CreatureJob::Pay, state_.elapsed);
+    } else if (c.gold_carried > 0.0f) {
+        set_job(c, CreatureJob::HaulGold, state_.elapsed);
+    } else if (c.hunger > kHungerEatThreshold) {
+        set_job(c, CreatureJob::Eat, state_.elapsed);
+        c.last_attempt_hunger = state_.elapsed;
+    } else if (c.fatigue > kFatigueSleepThreshold || c.sleep_need > kSleepNeedThreshold) {
+        set_job(c, CreatureJob::Sleep, state_.elapsed);
+        c.last_attempt_sleep = state_.elapsed;
+    } else if (c.job == CreatureJob::Idle || c.job == CreatureJob::Guard ||
+               c.job == CreatureJob::Explore || c.job == CreatureJob::Train ||
+               c.job == CreatureJob::Research || c.job == CreatureJob::Sulk) {
+        if (c.path.empty() && rank_available[std::max(0, std::min(2, c.anger_state))]) {
+            const int* jobs = c.happy_job;
+            const int* chances = c.happy_chance;
+            int* chosen_tick = &c.last_happy_chosen_tick;
+            if (c.anger_state == 1) {
+                jobs = c.unhappy_job; chances = c.unhappy_chance;
+                chosen_tick = &c.last_hunger_chosen_tick;
+            } else if (c.anger_state >= 2) {
+                jobs = c.angry_job; chances = c.angry_chance;
+                chosen_tick = &c.last_angry_chosen_tick;
+            }
+            ai_rng_ = mix32(ai_rng_ ^ (0x9e3779b9U * uint32_t(c.id + 1)) ^
+                            uint32_t(state_.tick_count));
+            unsigned roll = ai_rng_ % 100U;
+            unsigned cumulative = 0;
+            CreatureJob picked = CreatureJob::Idle;
+            for (int i = 0; i < 3; ++i) {
+                unsigned chance = static_cast<unsigned>(
+                    std::min(100, std::max(0, chances[i])));
+                if (jobs[i] > 0 && roll >= cumulative && roll < cumulative + chance) {
+                    picked = job_from_original_id(jobs[i]);
+                    break;
+                }
+                cumulative += chance;
+            }
+            if (picked != CreatureJob::Idle) {
+                set_job(c, picked, state_.elapsed);
+                *chosen_tick = tick;
+            } else {
+                // RECONSTRUCTION (UNKNOWN): species-based fallback preference.
+                int wanted = (c.job_class == 3 || c.species % 3 == 0)
+                    ? static_cast<int>(TerrainId::Workshop)
+                    : (c.job_class == 1 ? static_cast<int>(TerrainId::Library)
+                                        : static_cast<int>(TerrainId::GuardRoom));
+                int tx, ty;
+                if (find_room_tile(state_.rooms, wanted, cx, cy, tx, ty))
+                    set_job(c, wanted == static_cast<int>(TerrainId::Library)
+                                   ? CreatureJob::Research : CreatureJob::Train,
+                            state_.elapsed);
+                else
+                    set_job(c, CreatureJob::Guard, state_.elapsed);
+            }
+        }
+    }
+}
+
+bool Game::update_utility_path(Creature& c, int cx, int cy) {
+    if (c.target_x >= 0 || !c.path.empty()) return false;
+    int tx = -1, ty = -1;
+    bool have = false;
+    switch (c.state_id) {
+        case kAiStateMoveTo:
+            tx = c.move_to_x; ty = c.move_to_y;
+            have = tx >= 0 && ty >= 0;
+            break;
+        case kAiStateMoveToRoom:
+            have = find_room_tile(state_.rooms, c.room_type_id, cx, cy, tx, ty);
+            if (!have && c.move_to_room_x >= 0) {
+                tx = c.move_to_room_x; ty = c.move_to_room_y; have = true;
+            }
+            break;
+        case kAiStateMoveWithinRange:
+            tx = c.move_range_x; ty = c.move_range_y;
+            have = tx >= 0 && ty >= 0;
+            if (have && c.range_squared > 0.0f) {
+                float dx = float(tx) - c.x, dy = float(ty) - c.y;
+                if (dx * dx + dy * dy <= c.range_squared) {
+                    c.thing_id = -1;  // already in range
+                    return true;
+                }
+            }
+            break;
+        case kAiStateMoveToForNTurns:
+            if (c.turn_counter > 0) {
+                --c.turn_counter;
+                tx = c.move_turns_x; ty = c.move_turns_y;
+                have = tx >= 0 && ty >= 0;
+            } else {
+                c.state_id = c.state_before_utility;
+                return true;
+            }
+            break;
+        case kAiStateWaitFor:
+            if (c.wait_for > 0) --c.wait_for;
+            else c.state_id = c.state_before_utility;
+            return true;
+        default:
+            return false;
+    }
+    if (!have) {
+        c.failed_move_state = c.state_id;  // FailedMoveState (+0xeb/+0xef)
+        return true;
+    }
+    std::vector<int> path;
+    if (find_path(cx, cy, tx, ty, path)) {
+        c.path = std::move(path);
+        c.path_index = 0;
+        c.target_x = tx; c.target_y = ty;
+        c.state = CreatureState::Walking;
+        c.failed_move_state = 0;
+        return true;
+    }
+    // ReCalcNavCounter (+0xf5): retry navigation on a later tick.
+    c.failed_move_state = c.state_id;
+    c.recalc_nav_counter = (c.recalc_nav_counter + 1) % (kNavRecalcTicks + 1);
+    return true;
+}
+
+void Game::update_creature_triggers(Creature& c, int cx, int cy) {
+    (void)cx; (void)cy;
+    // Per-creature TriggerRoot / repeat count (CThing +0x419 / +0x4f9).
+    if (c.trigger_root >= 0 && c.trigger_root_repeat_count != 0) {
+        const bool fired = c.anger_state >= 2 || c.job == CreatureJob::Fight ||
+                           c.state == CreatureState::Dead;
+        if (fired) {
+            unsigned flag = unsigned(c.trigger_root) & 255u;
+            if (flag < state_.flags.size()) state_.flags[flag] = 1;
+            if (c.trigger_root_repeat_count > 0) --c.trigger_root_repeat_count;
+        }
+    }
+    // Hello reaction timestamp (LastHelloTime +0x4e5).
+    if (state_.elapsed - c.last_hello_time >= kHelloCooldownSeconds) {
+        for (const Creature& other : state_.creatures) {
+            if (&other == &c || other.team != c.team ||
+                other.state == CreatureState::Dead) continue;
+            float dx = other.x - c.x, dy = other.y - c.y;
+            if (dx * dx + dy * dy <= kHelloRange * kHelloRange) {
+                c.last_hello_time = state_.elapsed;
+                break;
+            }
+        }
+    }
+    // Party hierarchy (ReportingTo/MyLeadersId/PositionInParty): subordinates
+    // follow their leader when separated.  Cohesion radius is UNKNOWN.
+    if (c.reporting_to >= 0 && c.job != CreatureJob::Fight &&
+        c.state != CreatureState::Dead && c.path.empty() && c.target_x < 0) {
+        for (const Creature& leader : state_.creatures) {
+            if (leader.id != c.reporting_to || leader.state == CreatureState::Dead) continue;
+            float dx = leader.x - c.x, dy = leader.y - c.y;
+            if (dx * dx + dy * dy > 16.0f) {
+                c.target_x = std::max(0, std::min(state_.world.width - 1, int(leader.x)));
+                c.target_y = std::max(0, std::min(state_.world.height - 1, int(leader.y)));
+                std::vector<int> path;
+                if (find_path(cx, cy, c.target_x, c.target_y, path)) {
+                    c.path = std::move(path);
+                    c.path_index = 0;
+                    c.state = CreatureState::Walking;
+                } else {
+                    c.target_x = c.target_y = -1;
+                }
+            }
+            break;
+        }
+    }
+}
+
 void Game::update_creature(Creature& c) {
     const float dt = kTickSeconds;
     if (c.state == CreatureState::Dead || c.state == CreatureState::Decomposing) {
@@ -949,62 +1638,17 @@ void Game::update_creature(Creature& c) {
     if (c.attack_cooldown > 0.0f) c.attack_cooldown -= dt;
     if (c.creature_spell_cooldown > 0.0f) c.creature_spell_cooldown -= dt;
     if (c.backoff_timer > 0.0f) c.backoff_timer -= dt;
-    c.current_fear = std::max(0.0f, c.current_fear - 0.5f * dt);
+    c.current_fear = std::max(0.0f, c.current_fear - kFearDecayPerSecond * dt);
 
-    auto gain_xp = [&](float amount) {
-        if (amount <= 0.0f) return;
-        c.xp += amount;
-        while (c.xp >= c.exp_for_next_level) {
-            c.xp -= c.exp_for_next_level;
-            ++c.level;
-            c.max_hp *= 1.05f;
-            c.hp = std::min(c.max_hp, c.hp + c.max_hp * 0.05f);
-            c.mood = std::min(100.0f, c.mood + 5.0f);
-        }
-    };
+    // FUN_00478800 state dispatcher (including the battle override branch).
+    dispatch_state(c, state_.elapsed);
+
+    auto gain_xp = [&](float amount) { grant_xp(c, amount); };
 
     /* --- payday (PayState.cpp / FUN_00472390) --------------------------- */
-    c.pay_timer += dt;
-    if (c.pay_timer >= 10.0f) {
-        c.pay_timer = 0.0f;
-        if (c.team == 0 && c.pay > 0.0f) {
-            if (c.skip_next_payment) {
-                c.skip_next_payment = false;
-                c.get_paid = true;
-            } else if (state_.economy.withdraw(c.pay)) {
-                c.get_paid = true;
-                c.payment_needed = 0.0f;
-                c.mood = std::min(100.0f, c.mood + 2.0f);
-            } else {
-                c.get_paid = false;
-                c.payment_needed += c.pay;
-                ++c.payment_attempts;
-                apply_anger(c, c.anger_no_pay, 2);
-                if (c.path.empty()) set_job(c, CreatureJob::Pay, state_.elapsed);
-                if (c.payment_attempts >= 3) {
-                    c.rebel_active = true;
-                    apply_anger(c, c.anger_no_pay * 2.0f, 4);
-                }
-            }
-        } else {
-            c.get_paid = true;  // heroes are paid by their own portal
-        }
-    }
-
-    /* --- needs ---------------------------------------------------------- */
-    // The KWD field is a period in ticks: 32767 means "never gets hungry".
-    if (c.hunger_rate > 0.0f)
-        c.hunger = std::min(100.0f,
-                            c.hunger + std::min(10.0f, 1000.0f / c.hunger_rate) * dt);
-    else
-        c.hunger = std::min(100.0f, c.hunger + state_.config.hunger_rate * dt);
-    c.fatigue = std::min(100.0f, c.fatigue + state_.config.fatigue_rate * dt);
-    if (c.time_awake > 0.0f && c.time_awake_elapsed > c.time_awake)
-        c.sleep_need = std::min(100.0f, c.sleep_need + 2.0f * dt);
-    if (c.hunger > 70.0f || c.fatigue > 70.0f || c.sleep_need > 70.0f)
-        apply_anger(c, 0.01f, 1);
-    else
-        c.mood = std::min(100.0f, c.mood + 0.2f * dt);
+    /* --- payday (PayState.cpp / FUN_00472390) and needs ------------------- */
+    update_pay(c);
+    update_needs(c);
 
     /* --- lair / room capacity happiness (LairId + LairAvailability) ----- */
     c.lair_check_timer += dt;
@@ -1036,217 +1680,14 @@ void Game::update_creature(Creature& c) {
         if (workplaces == 0) apply_anger(c, c.anger_no_work * 0.2f, 3);
     }
 
-    /* --- combat: target selection and fear (FUN_0045cb00/FUN_004915d0) --- */
-    Creature* enemy = nullptr;
-    float best_d2 = c.sight * c.sight;
-    if (c.attacking_id >= 0) {
-        for (Creature& other : state_.creatures) {
-            if (other.id != c.attacking_id || other.state == CreatureState::Dead) continue;
-            float dx = other.x - c.x, dy = other.y - c.y;
-            if (dx * dx + dy * dy <= c.sight * c.sight) {
-                enemy = &other;
-                best_d2 = dx * dx + dy * dy;
-            } else {
-                c.attacking_id = -1;
-            }
-            break;
-        }
-    }
-    if (!enemy) {
-        for (Creature& other : state_.creatures) {
-            if (other.team == c.team || other.state == CreatureState::Dead) continue;
-            // Guard checks from SelectAVictim: a fighter already attacking,
-            // a creature held in hand, or a possessed creature is skipped.
-            if (c.state == CreatureState::InHand ||
-                (c.job == CreatureJob::Fight && c.attacking_id >= 0)) continue;
-            float dx = other.x - c.x, dy = other.y - c.y;
-            float d2 = dx * dx + dy * dy;
-            if (d2 <= c.melee_range * c.melee_range) { enemy = &other; best_d2 = d2; break; }
-            if (d2 < best_d2) { best_d2 = d2; enemy = &other; }
-        }
-        if (enemy) c.attacking_id = enemy->id;
-    }
+    /* --- combat: FUN_0045cb00 / FUN_004915d0 / FUN_004611d0 --------------- */
+    update_fight(c, cx, cy);
 
-    for (int i = 0; i < 8; ++i) {
-        c.melee_attackers[i] = -1;
-        c.range_attackers[i] = -1;
-    }
-    int melee_n = 0, range_n = 0;
-    for (const Creature& other : state_.creatures) {
-        if (&other == &c || other.state == CreatureState::Dead ||
-            other.team == c.team || other.attacking_id != c.id) continue;
-        float dx = other.x - c.x, dy = other.y - c.y;
-        float d2 = dx * dx + dy * dy;
-        if (d2 <= other.melee_range * other.melee_range) {
-            if (melee_n < 8) c.melee_attackers[melee_n++] = other.id;
-        } else if (d2 <= other.sight * other.sight) {
-            if (range_n < 8) c.range_attackers[range_n++] = other.id;
-        }
-    }
-    float incoming_threat = 0.0f;
-    for (int i = 0; i < 8 && c.melee_attackers[i] >= 0; ++i)
-        for (const Creature& other : state_.creatures)
-            if (other.id == c.melee_attackers[i]) incoming_threat += other.threat;
-    for (int i = 0; i < 8 && c.range_attackers[i] >= 0; ++i)
-        for (const Creature& other : state_.creatures)
-            if (other.id == c.range_attackers[i]) incoming_threat += other.threat * 0.5f;
-    if (enemy) incoming_threat = std::max(incoming_threat, enemy->threat);
-    c.temp_fear = std::max(0.0f, c.temp_fear + incoming_threat * 0.02f * dt - 0.5f * dt);
-    c.current_fear = std::max(c.current_fear, c.temp_fear);
-    if (enemy) c.threat_thing = enemy->id;
+    /* --- job selection: three independent mood tiers --------------------- */
+    choose_mood_job(c, cx, cy);
 
-    bool outnumbered = (melee_n + range_n) > 1;
-    bool already_fleeing = c.job == CreatureJob::Flee && c.backoff_timer > 0.0f;
-    bool overwhelmed = enemy && (already_fleeing || c.backoff_timer <= 0.0f) &&
-                       state_.elapsed >= c.fearless_until &&
-                       !(c.ai_flags & kAIFlagFearless) &&
-                       (c.current_fear > std::max(1.0f, c.fear) || outnumbered) &&
-                       (c.hp < c.max_hp * 0.55f || outnumbered);
-    if (overwhelmed) {
-        if (c.job != CreatureJob::Flee) c.return_job_id = c.current_job_id;
-        set_job(c, CreatureJob::Flee, state_.elapsed);
-        float ax = c.x - enemy->x, ay = c.y - enemy->y;
-        float len = std::max(0.0001f, std::sqrt(ax * ax + ay * ay));
-        c.target_x = std::max(0, std::min(world.width - 1,
-                                         int(c.x - ax / len * 4.0f)));
-        c.target_y = std::max(0, std::min(world.height - 1,
-                                         int(c.y - ay / len * 4.0f)));
-        c.path.clear();
-        c.path_index = 0;
-        c.state = CreatureState::Walking;
-        c.backoff_timer = 2.0f;
-        c.retreating_creature = enemy->id;
-        ++c.overthreat_counter;
-        apply_anger(c, 1.0f, 1);
-    } else if (enemy && best_d2 <= c.melee_range * c.melee_range) {
-        set_job(c, CreatureJob::Fight, state_.elapsed);
-        c.state = CreatureState::Fighting;
-        c.attack_type = 1;
-        if (c.attack_cooldown <= 0.0f) {
-            enemy->hp -= c.damage * resistance_factor(*enemy, c.attack_type);
-            c.attack_cooldown = std::max(0.1f, c.melee_recharge);
-            enemy->current_fear = std::max(enemy->current_fear, c.threat * 0.05f);
-            gain_xp(c.damage * 0.05f);
-        }
-        apply_anger(*enemy, 1.0f, 1);
-    }
-
-    if (enemy && enemy->state != CreatureState::Dead && c.creature_spell_cooldown <= 0.0f) {
-        float dist = std::sqrt(best_d2);
-        for (int i = 0; i < 3; ++i) {
-            int sid = c.spell_id[i];
-            if (sid <= 0 || sid >= 42 || c.level < c.spell_level[i]) continue;
-            float range = kCreatureSpellRange[sid] > 0.0f
-                              ? kCreatureSpellRange[sid] : c.melee_range;
-            if (dist > range) continue;
-            bool healing = (sid == 14 || sid == 20 || sid == 32);
-            bool self_buff = (sid == 13 || sid == 15 || sid == 16 || sid == 17 ||
-                              sid == 21 || sid == 22 || sid == 33 || sid == 36 || sid == 37);
-            if (healing) {
-                c.hp = std::min(c.max_hp, c.hp + c.max_hp * 0.2f);
-            } else if (self_buff) {
-                if (sid == 13 || sid == 21 || sid == 37)
-                    c.speed = std::min(4.0f, c.speed * 1.15f);
-                else if (sid == 36) {
-                    ai_rng_ = mix32(ai_rng_ ^ uint32_t(c.id));
-                    int nx = std::max(0, std::min(world.width - 1,
-                        int(c.x) + int(ai_rng_ % 9U) - 4));
-                    int ny = std::max(0, std::min(world.height - 1,
-                        int(c.y) + int((ai_rng_ >> 7) % 9U) - 4));
-                    if (world.walkable(nx, ny)) {
-                        c.x = float(nx) + 0.5f;
-                        c.y = float(ny) + 0.5f;
-                        c.path.clear();
-                    }
-                } else
-                    c.fearless_until = state_.elapsed + 10.0f;
-            } else {
-                enemy->hp -= c.damage * (0.5f + 0.1f * float(c.level)) *
-                             (1.0f + 0.1f * float(c.fight_style)) *
-                             resistance_factor(*enemy, c.spell_no);
-            }
-            c.creature_spell_cooldown = std::max(2.0f, kCreatureSpellRecharge[sid]);
-            c.active_creature_spell = sid;
-            c.spell_no = sid;
-            gain_xp(5.0f);
-            break;
-        }
-    }
-    if (enemy && enemy->hp <= 0.0f) {
-        enemy->hp = 0.0f;
-        enemy->state = CreatureState::Dead;
-        enemy->death_timer = 0.0f;
-        enemy->attacking_id = -1;
-        c.attacking_id = -1;
-        c.mood = std::min(100.0f, c.mood + 6.0f);
-        gain_xp(std::max(20.0f, enemy->max_hp * 0.05f));
-    }
-
-    /* --- job selection: three mood tiers (00479200.c:96-104) ------------- */
-    if (!enemy && c.job == CreatureJob::Fight && c.path.empty()) {
-        set_job(c, CreatureJob::Idle, state_.elapsed);
-    }
-    if (c.job != CreatureJob::Fight && c.job != CreatureJob::Flee) {
-        if (c.rebel_active && c.anger_state >= 2) {
-            if (c.path.empty()) set_job(c, CreatureJob::Rebel, state_.elapsed);
-        } else if (!c.get_paid && c.payment_needed > 0.0f && c.path.empty()) {
-            set_job(c, CreatureJob::Pay, state_.elapsed);
-        } else if (c.gold_carried > 0.0f) {
-            set_job(c, CreatureJob::HaulGold, state_.elapsed);
-        } else if (c.hunger > 60.0f) {
-            set_job(c, CreatureJob::Eat, state_.elapsed);
-        } else if (c.fatigue > 75.0f || c.sleep_need > 60.0f) {
-            set_job(c, CreatureJob::Sleep, state_.elapsed);
-        } else if (c.job == CreatureJob::Idle || c.job == CreatureJob::Guard ||
-                   c.job == CreatureJob::Explore || c.job == CreatureJob::Train ||
-                   c.job == CreatureJob::Research || c.job == CreatureJob::Sulk) {
-            if (c.path.empty()) {
-                const int* jobs = c.happy_job;
-                const int* chances = c.happy_chance;
-                if (c.anger_state == 1) {
-                    jobs = c.unhappy_job; chances = c.unhappy_chance;
-                } else if (c.anger_state >= 2) {
-                    jobs = c.angry_job; chances = c.angry_chance;
-                }
-                ai_rng_ = mix32(ai_rng_ ^ (0x9e3779b9U * uint32_t(c.id + 1)) ^
-                                uint32_t(state_.tick_count));
-                unsigned roll = ai_rng_ % 100U;
-                unsigned cumulative = 0;
-                CreatureJob picked = CreatureJob::Idle;
-                for (int i = 0; i < 3; ++i) {
-                    unsigned chance = static_cast<unsigned>(
-                        std::min(100, std::max(0, chances[i])));
-                    if (jobs[i] > 0 && roll >= cumulative && roll < cumulative + chance) {
-                        picked = job_from_original_id(jobs[i]);
-                        break;
-                    }
-                    cumulative += chance;
-                }
-                if (picked != CreatureJob::Idle) {
-                    set_job(c, picked, state_.elapsed);
-                    if (c.anger_state == 0) c.last_happy_chosen_tick = int(state_.tick_count);
-                    else if (c.anger_state == 1) c.last_hunger_chosen_tick = int(state_.tick_count);
-                    else c.last_angry_chosen_tick = int(state_.tick_count);
-                } else {
-                    /* Artisan species prefer the workshop, thinkers the library. */
-                    int wanted = (c.job_class == 3 || c.species % 3 == 0)
-                        ? static_cast<int>(TerrainId::Workshop)
-                        : (c.job_class == 1 ? static_cast<int>(TerrainId::Library)
-                                            : static_cast<int>(TerrainId::GuardRoom));
-                    int tx, ty;
-                    if (find_room_tile(state_.rooms, wanted, cx, cy, tx, ty))
-                        set_job(c, wanted == static_cast<int>(TerrainId::Library)
-                                       ? CreatureJob::Research : CreatureJob::Train,
-                                state_.elapsed);
-                    else
-                        set_job(c, CreatureJob::Guard, state_.elapsed);
-                }
-            }
-        }
-    }
-
-    /* --- target tile for the selected job ------------------------------- */
-    if (c.target_x < 0 && c.path.empty()) {
+    /* --- utility-state path, then ordinary job target -------------------- */
+    if (!update_utility_path(c, cx, cy) && c.target_x < 0 && c.path.empty()) {
         int tx = cx, ty = cy;
         bool have_target = false;
         int room_type = 0;
@@ -1374,6 +1815,8 @@ void Game::update_creature(Creature& c) {
         }
     }
     c.mood = std::max(0.0f, std::min(c.mood, 100.0f - anger_total(c)));
+    // Per-creature TriggerRoot, slap/hello/reaction timestamps and party hooks.
+    update_creature_triggers(c, cx, cy);
     c.idle_counter = std::abs(c.x - cx) < 0.01f && std::abs(c.y - cy) < 0.01f
                          ? c.idle_counter + 1 : 0;
 }
@@ -1386,7 +1829,10 @@ void Game::apply_anger(Creature& c, float amount, int source) {
     float total = anger_total(c);
     c.mood = std::max(0.0f, std::min(c.mood, 100.0f - total));
     int previous = c.anger_state;
-    float limit = std::max(1.0f, c.unhappy_threshold);
+    // Six anger slots + UnhappyAt (FUN_00487210, HIGH).  The 2x multiplier for
+    // the "angry" rank is a RECONSTRUCTION (UNKNOWN): the original threshold
+    // for that rank was not tied to a decompiled constant.
+    float limit = std::max(1.0f, c.unhappy_threshold);  // UnhappyAt from stats
     c.anger_state = total >= limit * 2.0f ? 2 : (total >= limit ? 1 : 0);
     if (c.anger_state == 2 && previous != 2) {
         c.rebel_active = true;
@@ -1442,102 +1888,75 @@ void Game::spawn_initial_enemies() {
     }
 }
 
-static const DK2TriggerNode* find_node(const DK2MissionTriggers& set, unsigned id) {
-    for (unsigned i = 0; i < set.count; ++i)
-        if (set.nodes[i].id == id) return &set.nodes[i];
-    return nullptr;
-}
-
-static bool condition_true(const DK2TriggerNode& n, const GameState& s) {
-    int keeper = 0;
-    for (const Creature& c : s.creatures)
-        if (c.team == 0 && c.state != CreatureState::Dead) ++keeper;
-    switch (n.type) {
-        case 1: {
-            unsigned id = n.id_param & 255u;
-            return id < s.flags.size() ? s.flags[id] != 0 : false;
-        }
-        case 2: {
-            unsigned id = n.id_param & 255u;
-            float value = id < s.timers.size() ? s.timers[id] : 0.0f;
-            return n.value <= 0.0f || value >= n.value;
-        }
-        case 19: return float(keeper) >= n.value;                 /* PLAYER_CREATURES */
-        case 25: return float(s.rooms.size()) >= n.value;         /* PLAYER_ROOMS */
-        case 30: return s.economy.gold >= n.value;                /* PLAYER_GOLD */
-        case 34: return s.elapsed >= n.value;                     /* LEVEL_TIME */
-        case 47: {
-            for (const Creature& c : s.creatures)
-                if (c.team == 1 && c.state == CreatureState::Dead) return true;
-            return false;
-        }
-        case 72: return s.elapsed > 2.0f;                         /* GUI_TRANSITION_ENDS */
-        default: return false;
-    }
-}
 
 void Game::evaluate_triggers() {
-    const DK2MissionTriggers* set = nullptr;
-    for (unsigned i = 0; i < kDK2MissionTriggerCount; ++i) {
-        if (state_.mission_name == kDK2MissionTriggers[i].map) {
-            set = &kDK2MissionTriggers[i];
-            break;
+    if (!trigger_runtime_) return;
+    dk2trigger::FunctionalTriggerContext ctx;
+    ctx.get_flag = [this](unsigned id) -> float {
+        return id < state_.flags.size() ? state_.flags[id] : 0.0f;
+    };
+    ctx.get_timer = [this](unsigned id) -> float {
+        return id < state_.timers.size() ? state_.timers[id] : 0.0f;
+    };
+    ctx.get_level_time = [this]() -> float { return state_.elapsed; };
+    ctx.get_time_limit = [this]() -> float { return state_.time_limit; };
+    ctx.set_flag = [this](unsigned id, float v) {
+        if (id < state_.flags.size()) state_.flags[id] = uint8_t(v != 0.0f);
+    };
+    ctx.set_timer = [this](unsigned id, float v) {
+        if (id < state_.timers.size()) state_.timers[id] = v;
+    };
+    ctx.get_target_value = [this](unsigned type, unsigned, unsigned) -> float {
+        int keeper = 0, enemies_dead = 0;
+        for (const Creature& c : state_.creatures) {
+            if (c.state == CreatureState::Dead) {
+                if (c.team == 1) ++enemies_dead;
+            } else if (c.team == 0) ++keeper;
         }
-    }
-    if (!set) return;
-
-    for (unsigned i = 0; i < set->count; ++i) {
-        const DK2TriggerNode& cond = set->nodes[i];
-        if (cond.is_action) continue;
-
-        /* idNext is a priority/first-match OR chain; idChild is the action. */
-        bool satisfied = condition_true(cond, state_);
-        unsigned next = cond.next;
-        for (int depth = 0; !satisfied && next != 0 && next != 65535 && depth < 32; ++depth) {
-            const DK2TriggerNode* nx = find_node(*set, next);
-            if (!nx || nx->is_action) break;
-            satisfied = condition_true(*nx, state_);
-            next = nx->next;
+        switch (type) {
+            case 19: return float(keeper);
+            case 25: return float(state_.rooms.size());
+            case 30: return state_.economy.gold;
+            case 47: return float(enemies_dead);
+            default: return 0.0f;
         }
-        if (!satisfied || cond.child == 0 || cond.child == 65535) continue;
-        const DK2TriggerNode* action = find_node(*set, cond.child);
-        if (!action || !action->is_action) continue;
-        if (fired_actions_.count(action->id)) continue;
-        fired_actions_.insert(action->id);
-
-        switch (action->type) {
-            case 7: {  /* FLAG */
-                unsigned id = action->id_param & 255u;
-                if (id < state_.flags.size())
-                    state_.flags[id] = uint8_t(action->value != 0.0f ? 1 : 0);
+    };
+    ctx.on_action = [this, &ctx](const dk2trigger::ActionRequest& req) {
+        switch (req.type) {
+            case dk2trigger::kWinGame: state_.victory = true; break;
+            case dk2trigger::kLoseGame: state_.defeat = true; break;
+            case dk2trigger::kSetTimeLimit: state_.time_limit = req.value; break;
+            case dk2trigger::kSetObjective:
+            case dk2trigger::kDisplayObjective:
+            case dk2trigger::kDisplayTextString:
+            case dk2trigger::kPlaySpeech:
+                state_.objective_id = int(req.text_id);
+                break;
+            case dk2trigger::kFlag:
+                dk2trigger::applyFlagAction(req, ctx);
+                break;
+            case dk2trigger::kInitializeTimer:
+                if (req.flag_id < state_.timers.size())
+                    state_.timers[req.flag_id] = 0.0f;
+                break;
+            case dk2trigger::kCreateCreature: {
+                int x = int(req.pos_x), y = int(req.pos_y);
+                if (x <= 0 || y <= 0) {
+                    x = state_.world.width / 2;
+                    y = state_.world.height / 2;
+                }
+                spawn_creature(0, x, y, 0);
                 break;
             }
-            case 8: {  /* INITIALIZE_TIMER */
-                unsigned id = action->id_param & 255u;
-                if (id < state_.timers.size()) state_.timers[id] = 0.0f;
-                break;
-            }
-            case 23: state_.time_limit = action->value; break;  /* SET_TIME_LIMIT */
-            case 25: state_.objective_id = int(action->id_param); break;  /* DISPLAY_TEXT_STRING */
-            case 15: state_.objective_id = int(action->id_param); break;  /* SET_OBJECTIVE */
-            case 14: {  /* CREATE_HERO_PARTY */
+            case dk2trigger::kCreateHeroParty: {
                 int x = state_.world.width - 4, y = state_.world.height / 2;
-                for (int i = 0; i < 3; ++i)
-                    spawn_creature(7 + i, x, y + i, 1);
-                break;
-            }
-            case 10: state_.victory = true; break;
-            case 11: state_.defeat = true; break;
-            case 12: break;
-            case 13: break;
-            case 1: {
-                int x = state_.world.width / 2, y = state_.world.height / 2;
-                spawn_creature(0, x, y, 1);
+                for (int i = 0; i < 3; ++i) spawn_creature(7 + i, x, y + i, 1);
                 break;
             }
             default: break;
         }
-    }
+    };
+    trigger_runtime_->evaluateAndDispatch(ctx);
 }
 
 void Game::step() {
@@ -1661,6 +2080,15 @@ bool Game::save(const std::string& path, std::string* error) const {
     w32(ai_rng_);
     w32(initial_enemies_spawned_ ? 1U : 0U);
     wf(pay_period_timer_);
+    // v5 extension: a second length-tagged trailer.  Old payload readers
+    // ignore it; new readers only consume it when tag and size validate.
+    w32(kSaveExtMagic2);
+    w32(uint32_t(sizeof(SaveCreatureExtras2)));
+    for (const Creature& c : state_.creatures) {
+        SaveCreatureExtras2 e2{};
+        pack_extras2(c, e2);
+        out.write(reinterpret_cast<const char*>(&e2), sizeof(e2));
+    }
     bool written = out.good();
     out.close();
     if (!written) {
@@ -1778,6 +2206,23 @@ bool Game::load(const std::string& path, std::string* error) {
                 r32(flag); initial_enemies_spawned_ = flag != 0;
                 rf(pay_period_timer_);
             }
+            // v5 extension trailer (DK2F).  Optional: an older save ends after
+            // pay_period_timer_, in which case the peek simply finds no tag.
+            if (in.good()) {
+                std::streampos after_v1 = in.tellg();
+                uint32_t magic2 = 0, size2 = 0;
+                r32(magic2); r32(size2);
+                if (magic2 == kSaveExtMagic2 && size2 == sizeof(SaveCreatureExtras2)) {
+                    for (Creature& c : state_.creatures) {
+                        SaveCreatureExtras2 e2{};
+                        if (!in.read(reinterpret_cast<char*>(&e2), sizeof(e2))) break;
+                        unpack_extras2(c, e2);
+                    }
+                } else if (after_v1 >= 0) {
+                    in.clear();
+                    in.seekg(after_v1);
+                }
+            }
         }
         in.clear();
     } else if (here >= 0) {
@@ -1820,6 +2265,18 @@ void Game::select_at(float wx, float wy) {
             best = d2;
             selected_creature = c.id;
         }
+    }
+}
+
+void Game::slap_creature(int creature_id) {
+    // Player slap: stamps LastSlapTick (+0x4bb) and raises the slap anger slot.
+    for (Creature& c : state_.creatures) {
+        if (c.id != creature_id || c.state == CreatureState::Dead) continue;
+        c.last_slap_tick = state_.elapsed;
+        c.last_reaction_time = state_.elapsed;
+        c.last_reaction_target = -1;
+        apply_anger(c, c.anger_slap, 4);
+        return;
     }
 }
 

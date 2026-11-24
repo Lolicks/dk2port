@@ -23,6 +23,8 @@ targets:
       - path: ../engine/Structures.generated.hpp
       - path: ../engine/SaveFile.cpp
       - path: ../engine/SaveFile.h
+      - path: ../engine/TriggerRuntime.cpp
+      - path: ../engine/TriggerRuntime.h
       - path: ../engine/GridSimulation.h
       - path: ../engine/Balance.generated.hpp
       - path: ../engine/CreatureStats.generated.hpp

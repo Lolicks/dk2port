@@ -72,9 +72,11 @@ if (temp.hasNext()) {
 4. Порядок обхода братьев = порядок следования `idNext`, а не порядок записей
    в файле и не числовой порядок id.
 
-Важное следствие для `engine/DK2.cpp`: `next = 65535` в сгенерированном
-`MissionTriggers.generated.hpp` означает «нет ссылки», потому что генератор
-заменил `0` на `0xFFFF`; в оригинале `0` = нет. HIGH.
+Важное уточнение (HIGH, проверено по всем 9161 записям): генератор **не**
+подменял `0` на `0xFFFF`. `0` = «нет ссылки» (4829 `next_id`, 5432 `child_id`),
+а `65535` — **реальный id действия** (9 `next_id` и 50 `child_id` указывают на
+записи с `id == 65535`). Все 1299 ненулевых ссылок разрешаются в существующие
+записи. Любая проверка `id == 65535` как «сентинла» — ошибка.
 
 ---
 
@@ -288,15 +290,15 @@ OpenKeeper не разрешено бинарником.
 //   чтобы условия были истинны.
 ```
 
-Минимальные изменения в текущем порту ( без изменения кода в этой задаче ):
+Правила §5 реализованы в отдельном от движка evaluators'е
+`engine/TriggerRuntime.h/.cpp` (см. §7). Текущий `engine/DK2.cpp` остался без
+изменений: интеграция — задача вызывающей стороны.
 
-| Файл | Что исправить |
+| Файл | Статус |
 |---|---|
-| `engine/MissionTriggers.generated.hpp:2` | убрать комментарий «next = AND-chain»; хранить `comparison`, `flag`, `flagId`, `repeat_times`, `text_id`, `path_id` (сейчас их нет в `DK2TriggerNode`) |
-| `engine/DK2.cpp:585-597` | `condition_true` должен принимать `comparison` и источник `value` |
-| `engine/DK2.cpp:616-625` | first-match по братьям вместо «все conditions должны быть true» |
-| `engine/DK2.cpp:613-651` | учитывать `repeat_times`; выполнять `child` conditions (вложенные), а не только прямое действие |
-| `engine/DK2.cpp` (новое) | action point registry и camera path/party spawn для действий §4 |
+| `engine/MissionTriggers.generated.hpp` | перегенерирован: все поля record, first-match комментарий, `findDK2TriggerNode`, `dk2MissionTriggersSelfTest` |
+| `engine/TriggerRuntime.h/.cpp` | **новое**: first-match OR, child gating, repeat, comparison 0..6, flag literal/indirect, action requests |
+| `engine/DK2.cpp:1451-1541` | не тронут; `condition_true` и `evaluate_triggers` всё ещё используют старую AND-логику и `>=` для всех типов |
 
 ---
 
@@ -311,3 +313,160 @@ OpenKeeper не разрешено бинарником.
   `INFORMATION`, `DISPLAY_OBJECTIVE`) не нарыты.
 * Точная семантика `type` 1/2 в `CREATE_HERO_PARTY` (IP vs IP random)
   взята из комментария KwdFile; в `DKII.EXE` не проверена.
+
+---
+
+## 7. Состояние реализации (после добавления TriggerRuntime)
+
+### 7.1. HIGH-confidence — зафиксировано и проверено на 9161 записи
+
+| Факт | Проверка |
+|---|---|
+| Все поля record: `id`, `next`, `child`, `tag`, `repeat_times`, `type`, `tdata[8]`, `comparison`, `flag`, `value_id`, `text_id`/`speech_id`/`objective_id`, `path_id`, `action_point_id`, `player`, `target_id`, `pos_x/y`, `available` | `docs/triggers.json`; round-trip тест `python3 tools/gen_engine_data.py --self-test` сравнивает **все 21 поле каждой из 9161 записи** с сгенерированным C++ (66 карт, 3753 условия / 5408 действий) |
+| `0` = «нет ссылки», `65535` = валидный id действия | 1299/1299 ненулевых `next`/`child` разрешаются; 9 `next` и 50 `child` указывают на `id == 65535` |
+| Дерево: `child` = первый ребёнок, `next` = следующий брат в том же родителе | `TriggerLoader.parse`; все ссылки разрешимы; `chain_stats.roots` = 1099 вершин, не имеющих входящих ссылок |
+| Первое активное условие в списке братьев выигрывает; действия в списке выполняются все | `TriggerControl.updateControl:96-139`; реализовано и покрыто тестами (приоритетный OR, child gating) |
+| `repeat`: 255 = всегда, 0/1 = отсоединить действие после первого выполнения, N = N тиков | `TriggerGenericData.subRepeatTimes/isRepeateable`; тесты на 255/0/1/2 |
+| Операторы 0..6, `NONE` → false | `TriggerGeneric.ComparisonType` + `TriggerControl.compare`; тесты на все 7 значений |
+| `flag == 1` → литерал `value`, иначе косвенный `flagId/timerId` | `TriggerControl.isActive:157-161,172-176`; в данных 1677/1678 записей используют литерал, 1 (`level3`, `flag=2`, `value_id=4`) — косвенный |
+| LEVEL_TIME всегда сравнивает с литералом `value` | `TriggerControl.java:179-182`; у type 34 нет байта `flag` |
+| Special ids: flag 128 = level score, timer 16 = time limit | `TriggerControl.java:50-51`; константы в API |
+| FLAG-действие: `EQUAL/PLUS/MINUS` + `TARGET` (0x008/0x010/0x020 + 0x004) | `TriggerControl.getTargetValue:384-396`; в данных биты 10 (VALUE\|EQUAL), 18 (VALUE\|PLUS), 12 (TARGET\|EQUAL), 20 (TARGET\|PLUS); эталонная реализация `applyFlagAction()` |
+| C++ self-test таблицы | `dk2MissionTriggersSelfTest()` в сгенерированном заголовке: 66 / 9161 / 3753 / 5408 + проверка всех ссылок |
+
+### 7.2. MEDIUM — эталонная гипотеза, реализованная как есть
+
+* Точная последовательность обхода: текущий узел → дети (начиная с `lastTriggerIndex+1`)
+  → первый активный ребёнок становится текущим на следующем тике; при пустом
+  списке детей узел отсоединяется и управление возвращается родителю; при
+  отсутствии активного ребёнка сброс `lastTrigger` и возврат к родителю/руту.
+  Воспроизведено в `TriggerRuntime::step()`.
+* Родительские `repeat_times` управляют отсоединением **дочерних действий**
+  (`trigger.isRepeateable()` в `TriggerControl:117`), а не `repeat_times` самой
+  action-записи. Это следует из кода, но не доказано байт-в-байт по `DKII.EXE`.
+* Начальное состояние — синтетический root с детьми = цепочка `root id → next`.
+  В оригинале root привязан к тегу объекта (`TriggerRoot`), в `triggers.json`
+  таких тегов нет, поэтому по умолчанию `deriveRoots()` берёт вершины без
+  входящих ссылок; 6 пустых карт не имеют корней вовсе.
+
+### 7.3. Остаточные unknowns (HIGH-confidence пока недостижимо)
+
+* **Текстовые id.** Numeric id из `PLAY_SPEECH` (`speech_id`), `DISPLAY_OBJECTIVE`
+  (`objective_id`), `INFORMATION` (`information_id`) и `DISPLAY_TEXT_STRING`
+  (`text_id`) не сопоставлены со строками: `game/Data/text/*.str` не дают
+  однозначного сопоставления без запуска оригинальной игры. Runtime передаёт id
+  как число в `ActionRequest::text_id`, резолвинг — за игрой.
+* **Action points / camera paths.** Числовые id есть, но реестр AP и таблица
+  путей камеры живут в рантайме оригинала; `ITriggerContext::resolveActionPoint()`
+  — необязательный хук для игры. Actions 26/27/31 требуют AP registry, которого
+  в статических данных нет.
+* **Алгоритм оригинального `DKII.EXE`.** Функция, однозначно читающая
+  `repeatTimes` и comparison-оператор из record, не найдена; строка
+  `WorldTrigger.cpp` и поля `TriggerRoot`/`TriggerRootRepeatCount` доказывают
+  существование подсистемы, но не её алгоритм. Поэтому §3 и §7.2 остаются
+  MEDIUM по отношению к бинарнику, даже будучи HIGH по отношению к OpenKeeper.
+* **Конфликт кодировки `flag` action** (§3.3), семантика `type` 1/2 в
+  `CREATE_HERO_PARTY`, поведение `SET_ALLIANCE` (OpenKeeper инвертирует
+  комментарий KwdFile) — требуют проверки на оригинальном рантайме.
+
+---
+
+## 8. Публичный API `engine/TriggerRuntime.h` и точки интеграции
+
+### 8.1. Сигнатуры
+
+```cpp
+namespace dk2trigger {
+
+enum class Comparison : std::uint8_t {
+    kNone = 0, kLess = 1, kLessEqual = 2, kEqual = 3,
+    kGreater = 4, kGreaterEqual = 5, kNotEqual = 6,
+};
+bool compareValues(float target, Comparison op, float value);
+
+struct ActionRequest {
+    unsigned node_id, type, flag, flag_id, value_id, text_id, path_id,
+             action_point_id, player, target_id, available, repeat_times;
+    float value, pos_x, pos_y;
+};
+
+struct ITriggerContext {
+    virtual float getFlag(unsigned id) = 0;
+    virtual float getTimer(unsigned id) = 0;
+    virtual float getLevelTime() = 0;
+    virtual float getTargetValue(unsigned target_type, unsigned target_id,
+                                 unsigned player) = 0;
+    virtual float getTimeLimit();
+    virtual float getLevelScore();
+    virtual bool resolveActionPoint(unsigned id, float& x, float& y);
+    virtual void onAction(const ActionRequest& request);
+    virtual void onUnsupported(unsigned node_id, unsigned type, const char* what);
+    virtual void setFlag(unsigned id, float value);
+    virtual void setTimer(unsigned id, float value);
+    virtual void setLevelScore(float value);
+    virtual ~ITriggerContext();
+};
+
+class FunctionalTriggerContext final : public ITriggerContext {
+public:
+    std::function<float(unsigned)> get_flag, get_timer;
+    std::function<float()> get_level_time, get_time_limit, get_level_score;
+    std::function<float(unsigned, unsigned, unsigned)> get_target_value;
+    std::function<bool(unsigned, float&, float&)> resolve_action_point;
+    std::function<void(const ActionRequest&)> on_action;
+    std::function<void(unsigned, unsigned, const char*)> on_unsupported;
+    std::function<void(unsigned, float)> set_flag, set_timer;
+    std::function<void(float)> set_level_score;
+};
+
+float resolveFlagActionValue(const ActionRequest& request, ITriggerContext& ctx);
+void applyFlagAction(const ActionRequest& request, ITriggerContext& ctx);
+
+class TriggerRuntime {
+public:
+    explicit TriggerRuntime(const DK2MissionTriggers& set);
+    TriggerRuntime(const DK2MissionTriggers& set, std::vector<unsigned> roots);
+    static std::vector<unsigned> deriveRoots(const DK2MissionTriggers& set);
+    void reset();
+    void setRoots(std::vector<unsigned> roots);
+    std::vector<ActionRequest> evaluate(ITriggerContext& ctx);
+    void evaluateAndDispatch(ITriggerContext& ctx);
+    const DK2MissionTriggers& set() const;
+    const std::vector<unsigned>& roots() const;
+    const RuntimeStats& stats() const;
+    unsigned currentNode(unsigned root_id) const;
+};
+
+}  // namespace dk2trigger
+```
+
+`RuntimeStats` (ReadOnly): `ticks`, `condition_checks`, `actions_emitted`,
+`nodes_detached`, `unsupported`.
+
+В сгенерированном заголовке доступны:
+`findDK2TriggerNode(set, id)` и
+`dk2MissionTriggersSelfTest(&maps, &nodes, &conditions, &actions)`.
+
+### 8.2. Интеграция в `engine/DK2.cpp` (без изменений в этой задаче)
+
+1. `#include "TriggerRuntime.h"` рядом с `#include "MissionTriggers.generated.hpp"`.
+2. В `Game` заменить `std::set<unsigned> fired_actions_` на
+   `std::unique_ptr<dk2trigger::TriggerRuntime> triggers_;` (или `std::optional`).
+3. При загрузке карты выбрать Set по `state_.mission_name` (как сейчас в
+   `evaluate_triggers`), создать `TriggerRuntime(set, TriggerRuntime::deriveRoots(set))`.
+   Если известен `TriggerRoot` из тега объекта — передать явный список root id.
+4. Реализовать адаптер `ITriggerContext` (можно `FunctionalTriggerContext`) поверх
+   `GameState`: `getFlag`→`s.flags[id]`, `getTimer`→`s.timers[id]`,
+   `getLevelTime`→`s.elapsed`, `getTimeLimit`→`s.time_limit`,
+   `getTargetValue`→PLAYER_GOLD/PLAYER_CREATURES/PLAYER_ROOMS/PLAYER_KILLED и др.,
+   `setFlag`/`setTimer`→те же массивы.
+5. В `Game::step()` заменить вызов `evaluate_triggers()` на
+   `triggers_->evaluateAndDispatch(*context_)`; `onAction` повторяет текущий
+   `switch (action->type)` из `DK2.cpp:1508-1539`, но работает с
+   `ActionRequest` (для `FLAG` можно вызвать `applyFlagAction()`).
+6. Удалить статические `find_node`/`condition_true` и `fired_actions_`: реестр
+   сработавших действий теперь хранится внутри рантайма как `detached`-узлы и
+   `repeat_left`.
+
+Порядок полей `DK2TriggerNode` стабилен и используется и генератором, и
+Python self-test'ом (`TRIGGER_FIELDS` в `tools/gen_engine_data.py`).

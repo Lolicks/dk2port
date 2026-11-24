@@ -18,7 +18,7 @@ jobs:
           clang++ -std=c++17 -O2 -Wall -Wextra \
             -o build/engine_tests \
             tests/engine_tests.cpp engine/DK2.cpp engine/GridSimulation.cpp \
-            engine/Structures.cpp engine/SaveFile.cpp
+            engine/Structures.cpp engine/SaveFile.cpp engine/TriggerRuntime.cpp
           ./build/engine_tests build/fixture.bin
 
   build-ios:
