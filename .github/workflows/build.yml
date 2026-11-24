@@ -160,6 +160,7 @@ jobs:
             echo "STATUS.md unchanged"
           else
             git commit -m "chore: refresh STATUS.md [skip ci]"
+            git pull --rebase origin master
             git push origin HEAD:master
           fi
           gh release edit latest --notes-file STATUS.md -R "$GITHUB_REPOSITORY"
