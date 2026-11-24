@@ -35,7 +35,7 @@ def main():
                 for y in range(rgba.height):
                     for x in range(rgba.width):
                         r, g, b, a = pixels[x, y]
-                        if (r, g, b) == KEY:
+                        if (r, g, b) == KEY and a != 0:
                             pixels[x, y] = (r, g, b, 0)
                             hit = True
                 if hit:
