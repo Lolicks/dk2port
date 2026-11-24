@@ -1,7 +1,7 @@
 # DK2Port — STATUS (auto-generated)
 
 **Updated:** 2026-11-24  
-**Verdict:** Full UI 1:1: 28 original screens/popups, original texts/fonts, all 24 movies and 71 GUI icons extracted from EngineTextures.dat; UI asset/text audit is clean.
+**Verdict:** Full UI 1:1 built into a fresh IPA: 28 original screens/popups, original texts/fonts, all 24 movies, 71 original GUI icons; UI audit clean (189 text ids, 77 images).
 
 ## Build & distribution
 
