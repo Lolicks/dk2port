@@ -6,16 +6,15 @@
 #include <string>
 #include <vector>
 
-@implementation DK2Bridge
+@implementation DK2Bridge {
+    std::unique_ptr<dk2::Game> _game;
+}
 
 + (instancetype)shared {
     static DK2Bridge *instance;
     static dispatch_once_t once;
     dispatch_once(&once, ^{ instance = [[DK2Bridge alloc] init]; });
     return instance;
-}
- {
-    std::unique_ptr<dk2::Game> _game;
 }
 
 - (instancetype)init {
