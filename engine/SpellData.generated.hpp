@@ -8,20 +8,21 @@ struct DK2SpellData {
     float recharge_time;
     int cast_rule;
     int target_rule;
+    int flags;
 };
 static const DK2SpellData kDK2Spells[] = {
-    {"Sight Of Evil", 1, 5000, 500.0f, 0.0f, 5, 4},
-    {"Possession", 2, 500, 500.0f, 0.0f, 5, 6},
-    {"Call To Arms", 3, 10000, 500.0f, 0.0f, 4, 4},
-    {"Create Imp", 4, 1500, 500.0f, 0.0f, 1, 4},
-    {"Summon Horny", 5, 100000, 500.0f, 0.0f, 1, 4},
-    {"Thunderbolt", 6, 6000, 500.0f, 0.0f, 1, 2},
-    {"Turncoat", 7, 20000, 500.0f, 60.0f, 1, 2},
-    {"Tremor", 8, 30000, 500.0f, 0.0f, 5, 4},
-    {"Inferno", 9, 50000, 500.0f, 60.0f, 1, 5},
-    {"Heal", 10, 5000, 500.0f, 0.0f, 4, 1},
-    {"Chicken", 11, 10000, 500.0f, 60.0f, 1, 3},
-    {"Create Gold", 13, 15000, 500.0f, 0.0f, 1, 4},
-    {"OneShotReaper", 14, 0, 1000.0f, 0.0f, 1, 4},
+    {"Sight Of Evil", 1, 5000, 500.0f, 0.0f, 5, 4, 16},
+    {"Possession", 2, 500, 500.0f, 0.0f, 5, 6, 16},
+    {"Call To Arms", 3, 10000, 500.0f, 0.0f, 4, 4, 16},
+    {"Create Imp", 4, 1500, 500.0f, 0.0f, 1, 4, 18},
+    {"Summon Horny", 5, 100000, 500.0f, 0.0f, 1, 4, 16},
+    {"Thunderbolt", 6, 6000, 500.0f, 0.0f, 1, 2, 4},
+    {"Turncoat", 7, 20000, 500.0f, 60.0f, 1, 2, 0},
+    {"Tremor", 8, 30000, 500.0f, 0.0f, 5, 4, 20},
+    {"Inferno", 9, 50000, 500.0f, 60.0f, 1, 5, 4},
+    {"Heal", 10, 5000, 500.0f, 0.0f, 4, 1, 8},
+    {"Chicken", 11, 10000, 500.0f, 60.0f, 1, 3, 4},
+    {"Create Gold", 13, 15000, 500.0f, 0.0f, 1, 4, 16},
+    {"OneShotReaper", 14, 0, 1000.0f, 0.0f, 1, 4, 16},
 };
 static const unsigned kDK2SpellCount = sizeof(kDK2Spells) / sizeof(kDK2Spells[0]);

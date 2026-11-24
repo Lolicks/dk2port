@@ -1010,6 +1010,32 @@ bool Game::place_door(int index, int x, int y, int owner) {
     return true;
 }
 
+static bool spell_cast_rule_valid(int rule, const Tile& tile, int team) {
+    const bool solid = !terrain_walkable(static_cast<TerrainId>(tile.terrain));
+    switch (rule) {
+        case 0: return false;
+        case 1: return !solid && tile.owner == uint8_t(team);
+        case 2: return !solid && (tile.owner == uint8_t(team) || tile.owner == 255);
+        case 3: return !solid && tile.owner != uint8_t(team);
+        case 4: return !solid;
+        case 5: return true;
+        default: return false;
+    }
+}
+
+static bool spell_target_rule_valid(int rule, const Creature* target) {
+    switch (rule) {
+        case 0: return false;
+        case 1: return target && target->team == 0;
+        case 2: return target && target->team != 0;
+        case 3: return target && target->team != 255;
+        case 4: case 5: return true;
+        case 6: return target && target->team == 0 &&
+                       !(target->ai_flags & kAIFlagHorny);
+        default: return false;
+    }
+}
+
 bool Game::cast_spell(int spell_index, int x, int y) {
     if (spell_index < 0 || spell_index >= static_cast<int>(kDK2SpellCount))
         return false;
@@ -1018,11 +1044,26 @@ bool Game::cast_spell(int spell_index, int x, int y) {
     if (spell_index < static_cast<int>(state_.cooldowns.size()) &&
         state_.cooldowns[spell_index] > 0.0f) return false;
     const DK2SpellData& spell = kDK2Spells[spell_index];
-    if (state_.mana < float(spell.mana_cost)) return false;
-
     Tile* tile = state_.world.at(x, y);
     if (!tile) return false;
-    state_.mana -= float(spell.mana_cost);
+    const bool creates_worker = (spell.flags & 0x0002) != 0;
+    int imps = 0;
+    for (const Creature& c : state_.creatures)
+        if (c.species == 0 && c.team == 0 && c.state != CreatureState::Dead) ++imps;
+    int mana_cost = spell.mana_cost;
+    if (creates_worker) mana_cost *= (std::max(0, imps - 4) + 1);
+    if (state_.mana < float(mana_cost)) return false;
+    if (!spell_cast_rule_valid(spell.cast_rule, *tile, 0)) return false;
+    const Creature* target = nullptr;
+    float closest = 1.5f * 1.5f;
+    for (const Creature& c : state_.creatures) {
+        if (c.state == CreatureState::Dead) continue;
+        float dx = c.x - (float(x) + 0.5f), dy = c.y - (float(y) + 0.5f);
+        float d2 = dx * dx + dy * dy;
+        if (d2 < closest) { closest = d2; target = &c; }
+    }
+    if (!spell_target_rule_valid(spell.target_rule, target)) return false;
+    state_.mana -= float(mana_cost);
     if (spell_index < static_cast<int>(state_.cooldowns.size()))
         state_.cooldowns[spell_index] = spell.recharge_time;
 

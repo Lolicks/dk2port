@@ -1,7 +1,7 @@
 # DK2Port — STATUS (auto-generated)
 
 **Updated:** 2026-11-24  
-**Verdict:** Core hardening step 6/10: OpenKeeper worker tasks ported (dig, claim, repair, haul gold).
+**Verdict:** Core hardening step 7/10: player spells use OpenKeeper cast/target rules and Create Imp cost scaling.
 
 ## Build & distribution
 
@@ -33,7 +33,7 @@
 | Full game-state serialization | DONE | DK2S v4: flags/timers/objective/time-limit + full creature/economy state |
 | Original grid simulation in game loop | DONE | FUN_00448d80 arithmetic, 49 ms gate in Game::step() |
 | Custom save system (v5 container, slots, autosave) | DONE | engine/SaveFile.*, DK2SaveManager.swift, SaveSlotsView.swift; CRC/legacy tests OK |
-| C++ core: fixed-step loop, A*, economy, combat, magic | PARTIAL | engine/DK2.cpp; data-driven economy, multi-tile rooms, traps/doors, OpenKeeper AI/battle, worker tasks dig/claim/repair/haul, save v5 |
+| C++ core: fixed-step loop, A*, economy, combat, magic | PARTIAL | engine/DK2.cpp; data-driven economy, multi-tile rooms, traps/doors, OpenKeeper AI/battle, worker tasks, spell cast/target validation + cost scaling, save v5 |
 | Metal tile renderer + touch camera controls | PARTIAL | MetalRenderer.swift; atlas path and time uniform fixed; compile-only check pending |
 | Cutscene/video playback in iOS UI | PARTIAL | CutsceneView.swift + Intro menu button; PNG frames produced in final build from TQI |
 | In-game audio (SDT -> AAC/PCM, positional mixer) | PARTIAL | tools/build_audio.py ready (self-test OK); AAC artifacts produced in final build only |

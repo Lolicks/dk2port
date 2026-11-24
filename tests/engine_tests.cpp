@@ -214,10 +214,49 @@ int main(int argc, char** argv) {
     CHECK(!game.cast_spell(99, 0, 0));  // invalid spell index
     if (game.state().spells_known.size() > 6) {
         game.state().spells_known[6] = 1;  // Turncoat: recharge 60 s
+        if (sx >= 0 && sy >= 0) game.spawn_creature(1, sx, sy, 1);
+        if (Tile* tt = game.state().world.at(sx >= 0 ? sx : 0, sy >= 0 ? sy : 0))
+            tt->owner = 0;
         CHECK(game.cast_spell(6, sx >= 0 ? sx : 0, sy >= 0 ? sy : 0));
         CHECK(game.state().cooldowns[6] > 0.0f);
         CHECK(!game.cast_spell(6, sx >= 0 ? sx : 0, sy >= 0 ? sy : 0));
         std::printf("magic: Turncoat cooldown=%.1fs\n", game.state().cooldowns[6]);
+    }
+
+    // OpenKeeper KeeperSpellCost: worker spells scale past 4 free imps.
+    {
+        Game sp;
+        CHECK(sp.load_map(bytes.data(), bytes.size(), nullptr));
+        int x = -1, y = -1;
+        for (int yy = 2; yy < sp.state().world.height - 2 && x < 0; ++yy)
+            for (int xx = 2; xx < sp.state().world.width - 2; ++xx)
+                if (sp.state().world.walkable(xx, yy)) { x = xx; y = yy; break; }
+        CHECK(x >= 0);
+        sp.state().world.at(x, y)->owner = 0;
+        sp.state().mana = 100000.0f;
+        sp.state().spells_known[3] = 1;
+        CHECK(sp.cast_spell(3, x, y));
+        float after_first = sp.state().mana;
+        std::printf("spell: create_imp first cost=%.0f\n", 100000.0f - after_first);
+        CHECK(std::fabs((100000.0f - after_first) - 1500.0f) < 0.01f);
+        for (int i = 0; i < 4; ++i) sp.spawn_creature(0, x, y, 0);
+        sp.state().cooldowns[3] = 0.0f;
+        CHECK(sp.cast_spell(3, x, y));
+        std::printf("spell: create_imp sixth cost=%.0f\n", after_first - sp.state().mana);
+        CHECK(std::fabs((after_first - sp.state().mana) - 3000.0f) < 0.01f);
+    }
+    {
+        Game sp;
+        CHECK(sp.load_map(bytes.data(), bytes.size(), nullptr));
+        int sx2 = -1, sy2 = -1;
+        for (int yy = 1; yy < sp.state().world.height - 1 && sx2 < 0; ++yy)
+            for (int xx = 1; xx < sp.state().world.width - 1; ++xx)
+                if (!sp.state().world.walkable(xx, yy)) { sx2 = xx; sy2 = yy; break; }
+        CHECK(sx2 >= 0);
+        sp.state().mana = 100000.0f;
+        sp.state().spells_known[2] = 1;
+        CHECK(!sp.cast_spell(2, sx2, sy2));
+        std::printf("spell: solid-tile cast rejected\n");
     }
 
     // Combat: a keeper creature and an invader at the same tile must resolve.
