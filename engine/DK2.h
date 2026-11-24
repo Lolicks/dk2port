@@ -383,6 +383,14 @@ struct GameState {
     std::array<float, 256> timers{};
     float time_limit = 0.0f;
     int objective_id = 0;
+    int text_id = 0;
+    int speech_id = 0;
+    int action_point_id = -1;
+    float action_point_x = 0.0f, action_point_y = 0.0f;
+    int camera_path_id = -1;
+    int camera_waypoint = 0;
+    float camera_path_timer = 0.0f;
+    std::array<uint8_t, 256> effects{};
     int selected_tile_x = -1;
     int selected_tile_y = -1;
     CameraState camera;
@@ -416,6 +424,8 @@ public:
     bool should_flee_or_attack(Creature& c, int cx, int cy);
     void update_battles();
     void update_worker_tasks();
+    void execute_trigger_action(const dk2trigger::ActionRequest& req);
+    void update_camera_path();
     bool damage_room(int x, int y, float amount);
     bool repair_room(int x, int y, float amount);
     void update_traps();

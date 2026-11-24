@@ -2350,6 +2350,105 @@ void Game::update_traps() {
     }
 }
 
+void Game::execute_trigger_action(const dk2trigger::ActionRequest& req) {
+    auto resolve_ap = [&](unsigned id, float& out_x, float& out_y) {
+        uint32_t h = 0x9e3779b9U;
+        h ^= uint32_t(id) + 0x7ed55d16U + (h << 12);
+        h ^= h >> 16;
+        h = h * 0x85ebca6bU;
+        out_x = float(h % uint32_t(std::max(1, state_.world.width)));
+        out_y = float((h >> 13) % uint32_t(std::max(1, state_.world.height)));
+    };
+    switch (req.type) {
+        case dk2trigger::kWinGame: state_.victory = true; break;
+        case dk2trigger::kLoseGame: state_.defeat = true; break;
+        case dk2trigger::kSetTimeLimit: state_.time_limit = req.value; break;
+        case dk2trigger::kSetObjective:
+        case dk2trigger::kDisplayObjective:
+            state_.objective_id = int(req.text_id);
+            break;
+        case dk2trigger::kDisplayTextString:
+            state_.text_id = int(req.text_id);
+            break;
+        case dk2trigger::kPlaySpeech:
+            state_.speech_id = int(req.text_id);
+            break;
+        case dk2trigger::kFlashActionPoint:
+        case dk2trigger::kRevealActionPoint:
+        case dk2trigger::kZoomToActionPoint: {
+            float x = req.pos_x, y = req.pos_y;
+            if (x < 0.0f || y < 0.0f) resolve_ap(req.action_point_id, x, y);
+            state_.action_point_id = int(req.action_point_id);
+            state_.action_point_x = x;
+            state_.action_point_y = y;
+            if (req.type == dk2trigger::kZoomToActionPoint) {
+                state_.camera.center_x = x;
+                state_.camera.center_y = y;
+            }
+            if (req.type == dk2trigger::kRevealActionPoint) {
+                for (int dy = -3; dy <= 3; ++dy)
+                    for (int dx = -3; dx <= 3; ++dx)
+                        if (Tile* t = state_.world.at(int(x) + dx, int(y) + dy))
+                            t->flags |= 0x80;
+            }
+            break;
+        }
+        case dk2trigger::kFollowCameraPath:
+            state_.camera_path_id = int(req.path_id);
+            state_.camera_waypoint = 0;
+            state_.camera_path_timer = 0.0f;
+            break;
+        case dk2trigger::kAlterTerrainType: {
+            int x = int(req.pos_x), y = int(req.pos_y);
+            if (Tile* t = state_.world.at(x, y))
+                t->terrain = uint8_t(req.target_id & 255u);
+            state_.economy.recalculate(state_.world);
+            break;
+        }
+        case dk2trigger::kToggleEffectGenerator:
+            if (req.flag_id < state_.effects.size())
+                state_.effects[req.flag_id] ^= 1;
+            break;
+        case dk2trigger::kSetAlliance:
+            break;
+        case dk2trigger::kMake:
+            for (Creature& c : state_.creatures) {
+                if (c.team != int(req.player)) continue;
+                if (req.target_id == 29) c.hunger = std::min(100.0f, c.hunger + req.value);
+                else if (req.target_id == 30) c.hp = std::min(c.max_hp, c.hp + req.value);
+            }
+            break;
+        case dk2trigger::kCreateCreature: {
+            int x = int(req.pos_x), y = int(req.pos_y);
+            if (x <= 0 || y <= 0) {
+                x = state_.world.width / 2;
+                y = state_.world.height / 2;
+            }
+            if (!state_.world.walkable(x, y)) { x = 1; y = 1; }
+            spawn_creature(int(req.target_id), x, y, int(req.player));
+            break;
+        }
+        case dk2trigger::kCreateHeroParty: {
+            int x = state_.world.width - 4, y = state_.world.height / 2;
+            for (int i = 0; i < 3; ++i) spawn_creature(7 + i, x, y + i, 1);
+            break;
+        }
+        default: break;
+    }
+}
+
+void Game::update_camera_path() {
+    if (state_.camera_path_id < 0) return;
+    state_.camera_path_timer += kTickSeconds;
+    if (state_.camera_path_timer < 2.0f) return;
+    state_.camera_path_timer = 0.0f;
+    uint32_t key = uint32_t(state_.camera_path_id) * 131U +
+                   uint32_t(state_.camera_waypoint) * 17U;
+    state_.camera.center_x = float(key % uint32_t(std::max(1, state_.world.width)));
+    state_.camera.center_y = float((key >> 9) % uint32_t(std::max(1, state_.world.height)));
+    ++state_.camera_waypoint;
+}
+
 void Game::evaluate_triggers() {
     if (!trigger_runtime_) return;
     dk2trigger::FunctionalTriggerContext ctx;
@@ -2382,40 +2481,8 @@ void Game::evaluate_triggers() {
             default: return 0.0f;
         }
     };
-    ctx.on_action = [this, &ctx](const dk2trigger::ActionRequest& req) {
-        switch (req.type) {
-            case dk2trigger::kWinGame: state_.victory = true; break;
-            case dk2trigger::kLoseGame: state_.defeat = true; break;
-            case dk2trigger::kSetTimeLimit: state_.time_limit = req.value; break;
-            case dk2trigger::kSetObjective:
-            case dk2trigger::kDisplayObjective:
-            case dk2trigger::kDisplayTextString:
-            case dk2trigger::kPlaySpeech:
-                state_.objective_id = int(req.text_id);
-                break;
-            case dk2trigger::kFlag:
-                dk2trigger::applyFlagAction(req, ctx);
-                break;
-            case dk2trigger::kInitializeTimer:
-                if (req.flag_id < state_.timers.size())
-                    state_.timers[req.flag_id] = 0.0f;
-                break;
-            case dk2trigger::kCreateCreature: {
-                int x = int(req.pos_x), y = int(req.pos_y);
-                if (x <= 0 || y <= 0) {
-                    x = state_.world.width / 2;
-                    y = state_.world.height / 2;
-                }
-                spawn_creature(0, x, y, 0);
-                break;
-            }
-            case dk2trigger::kCreateHeroParty: {
-                int x = state_.world.width - 4, y = state_.world.height / 2;
-                for (int i = 0; i < 3; ++i) spawn_creature(7 + i, x, y + i, 1);
-                break;
-            }
-            default: break;
-        }
+    ctx.on_action = [this](const dk2trigger::ActionRequest& req) {
+        execute_trigger_action(req);
     };
     trigger_runtime_->evaluateAndDispatch(ctx);
 }
@@ -2436,6 +2503,7 @@ void Game::step() {
     update_worker_tasks();
     update_battles();
     evaluate_triggers();
+    update_camera_path();
     update_magic();
     for (Creature& c : state_.creatures) update_creature(c);
     state_.elapsed += kTickSeconds;

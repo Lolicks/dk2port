@@ -433,6 +433,39 @@ int main(int argc, char** argv) {
                     real.state().elapsed);
     }
 
+    // Trigger actions: action points, text, camera paths, terrain.
+    {
+        Game tr;
+        CHECK(tr.load_map(bytes.data(), bytes.size(), nullptr));
+        dk2trigger::ActionRequest req;
+        req.type = dk2trigger::kDisplayTextString;
+        req.text_id = 1234;
+        tr.execute_trigger_action(req);
+        CHECK(tr.state().text_id == 1234);
+        req.type = dk2trigger::kZoomToActionPoint;
+        req.action_point_id = 7;
+        req.pos_x = -1.0f; req.pos_y = -1.0f;
+        tr.execute_trigger_action(req);
+        std::printf("trigger: ap=%d center=%.1f,%.1f\n", tr.state().action_point_id,
+                    tr.state().camera.center_x, tr.state().camera.center_y);
+        CHECK(tr.state().action_point_id == 7);
+        CHECK(tr.state().camera.center_x >= 0.0f);
+        req.type = dk2trigger::kFollowCameraPath;
+        req.path_id = 3;
+        tr.execute_trigger_action(req);
+        float x0 = tr.state().camera.center_x;
+        for (int i = 0; i < 70; ++i) tr.step();
+        std::printf("trigger: path=%d waypoint=%d moved=%.1f\n",
+                    tr.state().camera_path_id, tr.state().camera_waypoint,
+                    std::fabs(tr.state().camera.center_x - x0));
+        CHECK(tr.state().camera_path_id == 3);
+        CHECK(tr.state().camera_waypoint > 0);
+        req.type = dk2trigger::kAlterTerrainType;
+        req.pos_x = 2.0f; req.pos_y = 2.0f; req.target_id = 1;
+        tr.execute_trigger_action(req);
+        CHECK(tr.state().world.at(2, 2)->terrain == 1);
+    }
+
     // Custom DK2Port save container
     {
         const std::string sp = "/tmp/dk2_container_test.sav";
