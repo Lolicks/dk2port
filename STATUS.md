@@ -1,7 +1,7 @@
 # DK2Port — STATUS (auto-generated)
 
 **Updated:** 2026-11-24  
-**Verdict:** UI screenshot fixes shipped: bitmap text no longer mirrored, DK2 magenta transparency key converted to alpha; fresh IPA built with original GUI icons.
+**Verdict:** UI fixes shipped: 180-degree text orientation corrected, startup keeper imps added, original music/SFX wiring fixed, home-screen icon installed. Fresh IPA built and verified.
 
 ## Build & distribution
 

@@ -2,10 +2,10 @@
   "project": "Dungeon Keeper II — native iOS port",
   "repository": "https://github.com/Lolicks/dk2port",
   "updated": "2026-11-24",
-  "verdict": "UI screenshot fixes shipped: bitmap text no longer mirrored, DK2 magenta transparency key converted to alpha; fresh IPA built with original GUI icons.",
+  "verdict": "UI fixes shipped: 180-degree text orientation corrected, startup keeper imps added, original music/SFX wiring fixed, home-screen icon installed. Fresh IPA built and verified.",
   "build": {
-    "last_successful_run": "https://github.com/Lolicks/dk2port/actions/runs/45471814007",
-    "ipa_size_bytes": 784533575,
+    "last_successful_run": "https://github.com/Lolicks/dk2port/actions/runs/45506334858",
+    "ipa_size_bytes": 784631101,
     "release": "https://github.com/Lolicks/dk2port/releases/latest",
     "artifact": "DK2Port-IPA",
     "signed": false,
