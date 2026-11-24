@@ -1,7 +1,7 @@
 # DK2Port — STATUS (auto-generated)
 
 **Updated:** 2026-11-24  
-**Verdict:** Full port in progress; custom save system complete. Preview IPA in release.
+**Verdict:** PREVIEW BUILD: fixing missing CFBundleExecutable; full exact 1:1 port NOT complete.
 
 ## Build & distribution
 

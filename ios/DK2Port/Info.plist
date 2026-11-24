@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+  <key>CFBundleExecutable</key><string>DK2Port</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleSignature</key><string>????</string>
+  <key>CFBundleSupportedPlatforms</key>
+  <array><string>iPhoneOS</string></array>
+  <key>LSRequiresIPhoneOS</key><true/>
   <key>CFBundleDisplayName</key><string>Dungeon Keeper 2</string>
   <key>CFBundleIdentifier</key><string>com.dk2port.ios</string>
   <key>CFBundleVersion</key><string>1</string>

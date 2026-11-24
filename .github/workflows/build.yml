@@ -68,6 +68,17 @@ jobs:
             -archivePath build/DK2Port.xcarchive \
             CODE_SIGNING_ALLOWED=NO \
             archive
+      - name: Validate app bundle before packaging
+        working-directory: ios
+        run: |
+          set -euo pipefail
+          APP=$(find build/DK2Port.xcarchive/Products/Applications -maxdepth 1 -name '*.app' -print -quit)
+          test -n "$APP" || { echo "no .app in archive"; exit 1; }
+          EXE=$(plutil -extract CFBundleExecutable raw -o - "$APP/Info.plist")
+          echo "CFBundleExecutable=$EXE"
+          test -n "$EXE"
+          test -f "$APP/$EXE" || { echo "missing bundle executable $APP/$EXE"; exit 1; }
+          echo "bundle executable OK: $APP/$EXE"
       - name: Package IPA
         working-directory: ios
         run: |
@@ -94,7 +105,8 @@ jobs:
             Payload/DK2Port.app/Assets/data/stats.json \
             Payload/DK2Port.app/Assets/data/triggers.json \
             Payload/DK2Port.app/Assets/maps/maps.json \
-            Payload/DK2Port.app/Assets/integrity.json; do
+            Payload/DK2Port.app/Assets/integrity.json \
+            Payload/DK2Port.app/DK2Port; do
             unzip -l "$IPA" | grep -q "$f" || { echo "MISSING $f"; exit 1; }
             echo "OK $f"
           done
