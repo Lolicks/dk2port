@@ -4,7 +4,7 @@ import SwiftUI
 import UIKit
 
 final class DK2GameViewController: UIViewController {
-    private let bridge = DK2Bridge.shared
+    private let bridge = DK2Bridge.shared()
     private let audio = DK2AudioController()
     private var renderer: DK2MetalRenderer?
     private var displayLink: CADisplayLink?

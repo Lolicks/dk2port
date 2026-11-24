@@ -22,7 +22,7 @@ struct DK2SaveSlotsView: View {
                         if selected != nil { showConfirm = true }
                     }.disabled(selected == nil)
                     Button("Load selected") {
-                        if let s = selected { _ = DK2SaveManager.shared.load(slot: s, bridge: DK2Bridge.shared) }
+                        if let s = selected { _ = DK2SaveManager.shared.load(slot: s, bridge: DK2Bridge.shared()) }
                     }.disabled(selected == nil)
                     Button("Delete") {
                         if let s = selected {
@@ -60,7 +60,7 @@ struct DK2SaveSlotsView: View {
                 Button("Cancel", role: .cancel) {}
                 Button("Save") {
                     if let s = selected {
-                        _ = DK2SaveManager.shared.save(slot: s, bridge: DK2Bridge.shared)
+                        _ = DK2SaveManager.shared.save(slot: s, bridge: DK2Bridge.shared())
                         refresh()
                     }
                 }
