@@ -7,6 +7,7 @@
 #include "../../decoder/kmf/anim.h"
 #include "../../decoder/tgq/tgq.h"
 #include "../../decoder/audio/tgq_audio.h"
+#include "../../engine/SaveFile.h"
 
 #include <cstdio>
 #include <cstring>
@@ -104,6 +105,27 @@ static NSData *DK2BinaryFrameFromOBJ(NSData *obj) {
 }
 
 @implementation DK2DecoderBridge
+
++ (NSDictionary *)saveInfoAtPath:(NSString *)path error:(NSError **)error {
+    dk2::save::SaveInfo info;
+    std::string err;
+    if (!dk2::save::read_info(stdString(path), &info, &err)) {
+        if (error) *error = [NSError errorWithDomain:@"DK2Save" code:1
+            userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithUTF8String:err.c_str()]}];
+        return nil;
+    }
+    return @{
+        @"valid": @(info.valid),
+        @"version": @(info.container_version),
+        @"payloadVersion": @(info.payload_version),
+        @"tick": @(info.tick),
+        @"elapsed": @(info.elapsed),
+        @"creatures": @(info.creature_count),
+        @"mission": @(info.mission),
+        @"timestamp": @(info.timestamp),
+    };
+}
+
 
 + (NSDictionary *)wadInfo:(NSData *)wad error:(NSError **)error {
     Dk2Wad parsed;

@@ -5,6 +5,7 @@ NS_ASSUME_NONNULL_BEGIN
 @interface DK2Bridge : NSObject
 
 - (instancetype)init;
++ (instancetype)shared;
 - (BOOL)loadMapAtPath:(NSString *)path error:(NSError *_Nullable *_Nullable)error;
 - (void)loadCreatures:(NSArray<NSString *> *)creatures
                 rooms:(NSArray<NSString *> *)rooms
@@ -22,6 +23,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)selectWorldX:(float)x y:(float)y;
 - (BOOL)saveToPath:(NSString *)path;
 - (BOOL)loadFromPath:(NSString *)path;
++ (nullable NSDictionary *)saveInfoAtPath:(NSString *)path error:(NSError **)error;
 
 @property (nonatomic, readonly) NSDictionary *snapshot;
 @property (nonatomic, readonly) NSArray<NSDictionary *> *tileInstances;

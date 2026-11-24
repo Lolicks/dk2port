@@ -43,6 +43,7 @@ struct DK2FrontEndView: View {
 
     @State private var page: Page = .main
     @State private var playingCutscene: String?
+    @State private var showSaves = false
 
     enum Page { case main, campaign, skirmish, options }
 
@@ -57,7 +58,9 @@ struct DK2FrontEndView: View {
 
     var body: some View {
         ZStack {
-            if let movie = playingCutscene {
+            if showSaves {
+                DK2SaveSlotsView { showSaves = false }
+            } else if let movie = playingCutscene {
                 DK2CutsceneView(name: movie) { playingCutscene = nil }
             } else if let bg = DK2Art.image("BG_Tiles/BG-Skirmish-00.png") {
                 Image(uiImage: bg).resizable().scaledToFill().ignoresSafeArea()
@@ -78,6 +81,7 @@ struct DK2FrontEndView: View {
                     DK2OriginalButton(title: "Campaign") { page = .campaign }
                     DK2OriginalButton(title: "Skirmish") { page = .skirmish }
                     DK2OriginalButton(title: "Intro") { playingCutscene = "BullfrogIntro" }
+                    DK2OriginalButton(title: "Save / Load") { showSaves = true }
                     DK2OriginalButton(title: "Options") { page = .options }
                 }
             case .campaign, .skirmish:

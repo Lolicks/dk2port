@@ -2,7 +2,7 @@
   "project": "Dungeon Keeper II — native iOS port",
   "repository": "https://github.com/Lolicks/dk2port",
   "updated": "2026-11-24",
-  "verdict": "PREVIEW BUILD: current code compiled into IPA for user testing. Full exact 1:1 port NOT complete.",
+  "verdict": "Full port in progress; custom save system complete. Preview IPA in release.",
   "build": {
     "last_successful_run": "https://github.com/Lolicks/dk2port/actions/runs/45244837079",
     "ipa_size_bytes": 492544759,
@@ -104,8 +104,8 @@
     },
     {
       "name": "Original save-file compatibility",
-      "state": "missing",
-      "evidence": "custom DK2S v2; upstream creature block BROKEN"
+      "state": "cancelled",
+      "evidence": "Not required by user decision: custom DK2S v5 container with CRC, slots and autosave"
     },
     {
       "name": "Lighting, shadows, particles, water visual fidelity",
@@ -129,8 +129,8 @@
     },
     {
       "name": "Original save format RE",
-      "state": "missing",
-      "evidence": "docs/format-research/SAVE_FORMAT.md; block unsolved, no sample saves"
+      "state": "cancelled",
+      "evidence": "Not required by user decision"
     },
     {
       "name": "Compile-only macOS verification",
@@ -156,6 +156,11 @@
       "name": "Original grid simulation in game loop",
       "state": "done",
       "evidence": "FUN_00448d80 arithmetic, 49 ms gate in Game::step()"
+    },
+    {
+      "name": "Custom save system (v5 container, slots, autosave)",
+      "state": "done",
+      "evidence": "engine/SaveFile.*, DK2SaveManager.swift, SaveSlotsView.swift; CRC/legacy tests OK"
     }
   ]
 }

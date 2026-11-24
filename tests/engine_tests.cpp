@@ -1,9 +1,11 @@
 #include "../engine/DK2.h"
 #include "../engine/GridSimulation.h"
+#include "../engine/SaveFile.h"
 
 #include <cassert>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <iterator>
 #include <string>
@@ -183,6 +185,47 @@ int main(int argc, char** argv) {
         std::printf("mission level1: victory=%d gold=%.0f t=%.1f\n",
                     int(real.state().victory), real.state().economy.gold,
                     real.state().elapsed);
+    }
+
+    // Custom DK2Port save container
+    {
+        const std::string sp = "/tmp/dk2_container_test.sav";
+        std::string error;
+        save::SaveInfo meta;
+        meta.timestamp = 1234567;
+        meta.tick = 9876;
+        meta.elapsed = 321.5f;
+        meta.creature_count = 7;
+        strncpy(meta.mission, "level1", 31);
+        const uint8_t payload[] = "DK2S-payload-for-container-test";
+        CHECK(save::write_container(sp, payload, sizeof(payload), meta, &error));
+        save::SaveInfo read;
+        CHECK(save::read_info(sp, &read, &error));
+        CHECK(read.valid);
+        CHECK(read.container_version == save::kContainerVersion);
+        CHECK(read.tick == 9876);
+        CHECK(read.creature_count == 7);
+        CHECK(std::string(read.mission) == "level1");
+        std::string extracted = sp + ".out";
+        CHECK(save::extract_payload(sp, extracted, &read, &error));
+        std::ifstream ef(extracted, std::ios::binary);
+        std::vector<char> got((std::istreambuf_iterator<char>(ef)),
+                              std::istreambuf_iterator<char>());
+        CHECK(std::string(got.data(), got.size()) == std::string((const char*)payload, sizeof(payload)));
+        ef.close();
+
+        // Corrupt one payload byte -> CRC must fail.
+        FILE* f = fopen(sp.c_str(), "r+b");
+        if (f) {
+            fseek(f, -2, SEEK_END);
+            fputc('X', f);
+            fclose(f);
+        }
+        CHECK(!save::extract_payload(sp, extracted, &read, &error));
+        CHECK(!error.empty());
+        std::remove(extracted.c_str());
+        std::remove(sp.c_str());
+        std::printf("save container: crc/metadata/corruption OK\n");
     }
 
     // Grid simulation reconstructed from Ghidra FUN_00448d80.

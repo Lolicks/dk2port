@@ -300,8 +300,8 @@ public:
     GameState& state() { return state_; }
     const GameState& state() const { return state_; }
 
-    bool save(const std::string& path) const;
-    bool load(const std::string& path);
+    bool save(const std::string& path, std::string* error = nullptr) const;
+    bool load(const std::string& path, std::string* error = nullptr);
 
     // Platform layer receives these events; Metal/UIKit adapter implements them.
     void on_pan(float dx, float dy);

@@ -6,6 +6,9 @@
 #include "SpellData.generated.hpp"
 #include "Structures.h"
 #include "GridSimulation.h"
+#include "SaveFile.h"
+#include <ctime>
+#include <iterator>
 
 #include <algorithm>
 #include <cctype>
@@ -1588,9 +1591,13 @@ void Game::step() {
     }
 }
 
-bool Game::save(const std::string& path) const {
-    std::ofstream out(path, std::ios::binary);
-    if (!out) return false;
+bool Game::save(const std::string& path, std::string* error) const {
+    const std::string raw_path = path + ".raw";
+    std::ofstream out(raw_path, std::ios::binary);
+    if (!out) {
+        if (error) *error = "cannot create save temp file";
+        return false;
+    }
     SaveHeader h{};
     h.magic = kSaveMagic;
     h.version = kSaveVersion;
@@ -1654,15 +1661,46 @@ bool Game::save(const std::string& path) const {
     w32(ai_rng_);
     w32(initial_enemies_spawned_ ? 1U : 0U);
     wf(pay_period_timer_);
-    return out.good();
+    bool written = out.good();
+    out.close();
+    if (!written) {
+        remove(raw_path.c_str());
+        if (error) *error = "failed writing save payload";
+        return false;
+    }
+    std::ifstream pf(raw_path, std::ios::binary);
+    std::vector<uint8_t> payload((std::istreambuf_iterator<char>(pf)),
+                                 std::istreambuf_iterator<char>());
+    pf.close();
+    remove(raw_path.c_str());
+    save::SaveInfo meta;
+    meta.timestamp = uint64_t(std::time(nullptr));
+    meta.tick = state_.tick_count;
+    meta.elapsed = state_.elapsed;
+    meta.creature_count = uint32_t(state_.creatures.size());
+    std::strncpy(meta.mission, state_.mission_name.c_str(), save::kMaxMissionName - 1);
+    return save::write_container(path, payload.data(), payload.size(), meta, error);
 }
 
-bool Game::load(const std::string& path) {
-    std::ifstream in(path, std::ios::binary);
-    if (!in) return false;
+bool Game::load(const std::string& path, std::string* error) {
+    save::SaveInfo meta;
+    std::string source = path;
+    const std::string extracted = path + ".extracted";
+    if (!save::extract_payload(path, extracted, &meta, error)) return false;
+    if (meta.valid) source = extracted;
+    std::ifstream in(source, std::ios::binary);
+    if (!in) {
+        if (meta.valid) remove(extracted.c_str());
+        if (error) *error = "cannot open save payload";
+        return false;
+    }
     SaveHeader h{};
     in.read(reinterpret_cast<char*>(&h), sizeof(h));
-    if (!in || h.magic != kSaveMagic || h.version != kSaveVersion) return false;
+    if (!in || h.magic != kSaveMagic || h.version != kSaveVersion) {
+        if (meta.valid) remove(extracted.c_str());
+        if (error) *error = "unsupported save payload version";
+        return false;
+    }
 
     auto r32 = [&](uint32_t& v) { in.read(reinterpret_cast<char*>(&v), 4); };
     auto rf = [&](float& v) { in.read(reinterpret_cast<char*>(&v), 4); };
@@ -1751,7 +1789,9 @@ bool Game::load(const std::string& path) {
     next_creature_id_ = 1;
     for (const Creature& c : state_.creatures)
         next_creature_id_ = std::max(next_creature_id_, c.id + 1);
-    return in.good();
+    bool ok = in.good();
+    if (meta.valid) remove(extracted.c_str());
+    return ok;
 }
 
 void Game::on_pan(float dx, float dy) {

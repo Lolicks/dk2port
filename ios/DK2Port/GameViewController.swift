@@ -4,7 +4,7 @@ import SwiftUI
 import UIKit
 
 final class DK2GameViewController: UIViewController {
-    private let bridge = DK2Bridge()
+    private let bridge = DK2Bridge.shared
     private let audio = DK2AudioController()
     private var renderer: DK2MetalRenderer?
     private var displayLink: CADisplayLink?
@@ -90,6 +90,8 @@ final class DK2GameViewController: UIViewController {
         let snapshot = bridge.snapshot
         audio.updateListener(x: snapshot["centerX"] as? Float ?? 0,
                              y: snapshot["centerY"] as? Float ?? 0)
+        DK2SaveManager.shared.updateAutosave(snapshot: snapshot as NSDictionary,
+                                             bridge: bridge)
         onState?(snapshot as NSDictionary)
     }
 
@@ -174,9 +176,13 @@ final class DK2GameViewController: UIViewController {
             let cy = bridge.snapshot["centerY"] as? Float ?? 0
             _ = bridge.spawnCreature(Int32(index), x: Int32(cx), y: Int32(cy))
         case DK2GameCommand.save:
-            if let slot = info[DK2GameCommand.Key.slot] as? String { saveGame(name: slot) }
+            if let slot = info[DK2GameCommand.Key.slot] as? String {
+                _ = DK2SaveManager.shared.save(slot: slot, bridge: bridge)
+            }
         case DK2GameCommand.load:
-            if let slot = info[DK2GameCommand.Key.slot] as? String { loadGame(name: slot) }
+            if let slot = info[DK2GameCommand.Key.slot] as? String {
+                _ = DK2SaveManager.shared.load(slot: slot, bridge: bridge)
+            }
         case DK2GameCommand.pause:
             let paused = info[DK2GameCommand.Key.paused] as? Bool ?? false
             displayLink?.isPaused = paused

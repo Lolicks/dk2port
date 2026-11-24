@@ -6,7 +6,15 @@
 #include <string>
 #include <vector>
 
-@implementation DK2Bridge {
+@implementation DK2Bridge
+
++ (instancetype)shared {
+    static DK2Bridge *instance;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ instance = [[DK2Bridge alloc] init]; });
+    return instance;
+}
+ {
     std::unique_ptr<dk2::Game> _game;
 }
 
@@ -109,6 +117,8 @@ static std::string stdString(NSString *s) { return s.UTF8String ?: ""; }
         @"zoom": @(s.camera.zoom),
         @"yaw": @(s.camera.yaw),
         @"ticks": @(s.tick_count),
+        @"elapsed": @(s.elapsed),
+        @"mission": [NSString stringWithUTF8String:s.mission_name.c_str()],
         @"victory": @(s.victory),
         @"defeat": @(s.defeat),
         @"selected": @(_game->selected_creature),
