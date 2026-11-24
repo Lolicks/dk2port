@@ -35,3 +35,5 @@ tmp/
 
 # Generated original UI fonts (small, required for 1:1 FrontEnd)
 !ios/DK2Port/Resources/Assets/interface/fonts/*.png
+!ios/DK2Port/Resources/Assets/textures/EngineTextures/GUI/**/*.png
+!ios/DK2Port/Resources/Assets/textures/FrontEnd/Mov_Shots/*.png

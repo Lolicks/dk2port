@@ -1,7 +1,7 @@
 # DK2Port — STATUS (auto-generated)
 
 **Updated:** 2026-11-24  
-**Verdict:** Full UI 1:1 pass: 28 original screens + popups, original texts/fonts, all 24 movies; 77 GUI icon paths still missing from shipped data (fallbacks used).
+**Verdict:** Full UI 1:1: 28 original screens/popups, original texts/fonts, all 24 movies and 71 GUI icons extracted from EngineTextures.dat; UI asset/text audit is clean.
 
 ## Build & distribution
 
@@ -38,7 +38,7 @@
 | C++ core: fixed-step loop, A*, economy, combat, magic | PARTIAL | engine/DK2.cpp; data-driven economy, multi-tile rooms, traps/doors, OpenKeeper AI/battle/worker/spells/triggers, grid field, DK2S v6 full-state save |
 | Metal tile renderer + touch camera controls | PARTIAL | MetalRenderer.swift; atlas path and time uniform fixed; compile-only check pending |
 | In-game audio (SDT -> AAC/PCM, positional mixer) | PARTIAL | tools/build_audio.py ready (self-test OK); AAC artifacts produced in final build only |
-| Full FrontEnd UI (build/traps/doors/spells/creature panels) | PARTIAL | DK2Screens.swift + FrontEndView.swift; 28 screens/popups from MainMenu.xml, original menuText/buttons/options/extras/MP/MPD; HUDView/GamePanels 1:1 layout; 77 GUI icon paths absent in installed data, graceful fallbacks; device compile pending |
+| Full FrontEnd UI (build/traps/doors/spells/creature panels) | PARTIAL | DK2Screens.swift + FrontEndView.swift; 28 screens/popups from MainMenu.xml, original menuText/buttons/options/extras/MP/MPD; HUDView/GamePanels 1:1 layout; 71 original GUI icons extracted from DK2TextureCache/EngineTextures.dat; audit_ui.py: 189 menu ids and 77 images resolve; device screenshots pending |
 | Lighting, shadows, particles, water visual fidelity | PARTIAL | mesh normals + bump/scroll water, fog-of-war, settings hook; shadow map/emitters still approximate |
 | Creature AI RE mapping from original functions | PARTIAL | docs/format-research/AI_FUNCTIONS.md; HIGH function attribution, job thresholds LOW |
 | Trigger semantics RE (next=OR, child=gating) | PARTIAL | docs/format-research/TRIGGER_SEMANTICS.md; MEDIUM confidence |

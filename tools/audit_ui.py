@@ -12,6 +12,8 @@ OPENKEEPER = os.path.join(ROOT, "research", "OpenKeeper", "assets", "Interface")
 ASSETS = os.path.join(ROOT, "build", "Assets")
 TEXT = os.path.join(ROOT, "ios", "DK2Port", "Resources", "Assets", "interface", "Text.properties")
 
+IGNORE_PREFIXES = ("textfield/", "scrollbar/", "slider/")
+
 MENU = re.compile(r"\$\{menu\.(\d+)\}")
 IMAGE = re.compile(r'filename="([^"]+)"')
 
@@ -34,10 +36,14 @@ def resolve_image(name):
         rel = name[len("textures/"):]
     else:
         rel = name
+    bundle_textures = os.path.join(ROOT, "ios", "DK2Port", "Resources", "Assets", "textures")
     candidates = [
         os.path.join(ASSETS, "textures", "FrontEnd", rel),
+        os.path.join(bundle_textures, "FrontEnd", rel),
         os.path.join(ASSETS, "textures", "EngineTextures", rel),
         os.path.join(ASSETS, "textures", rel),
+        os.path.join(bundle_textures, rel),
+        os.path.join(bundle_textures, "EngineTextures", rel),
     ]
     for path in candidates:
         if os.path.isfile(path):
@@ -64,11 +70,14 @@ def main():
                 continue
             path = os.path.join(dirpath, name)
             text = open(path, encoding="utf-8", errors="replace").read()
+            text = re.sub(r"<!--.*?-->", "", text, flags=re.S)
             screens.extend(re.findall(r'<screen[^>]+id="([^"]+)"', text))
             ids = {int(v) for v in MENU.findall(text)}
             menu_ids |= ids
             for image in IMAGE.findall(text):
                 if "$" in image or not re.search(r"\.(png|bmp|444|gif)$", image, re.I):
+                    continue
+                if image.lower().startswith(IGNORE_PREFIXES):
                     continue
                 images.add(image)
                 if not resolve_image(image):

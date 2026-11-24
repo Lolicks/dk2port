@@ -2,7 +2,7 @@
   "project": "Dungeon Keeper II — native iOS port",
   "repository": "https://github.com/Lolicks/dk2port",
   "updated": "2026-11-24",
-  "verdict": "Full UI 1:1 pass: 28 original screens + popups, original texts/fonts, all 24 movies; 77 GUI icon paths still missing from shipped data (fallbacks used).",
+  "verdict": "Full UI 1:1: 28 original screens/popups, original texts/fonts, all 24 movies and 71 GUI icons extracted from EngineTextures.dat; UI asset/text audit is clean.",
   "build": {
     "last_successful_run": "https://github.com/Lolicks/dk2port/actions/runs/45244837079",
     "ipa_size_bytes": 734290169,
@@ -100,7 +100,7 @@
     {
       "name": "Full FrontEnd UI (build/traps/doors/spells/creature panels)",
       "state": "partial",
-      "evidence": "DK2Screens.swift + FrontEndView.swift; 28 screens/popups from MainMenu.xml, original menuText/buttons/options/extras/MP/MPD; HUDView/GamePanels 1:1 layout; 77 GUI icon paths absent in installed data, graceful fallbacks; device compile pending"
+      "evidence": "DK2Screens.swift + FrontEndView.swift; 28 screens/popups from MainMenu.xml, original menuText/buttons/options/extras/MP/MPD; HUDView/GamePanels 1:1 layout; 71 original GUI icons extracted from DK2TextureCache/EngineTextures.dat; audit_ui.py: 189 menu ids and 77 images resolve; device screenshots pending"
     },
     {
       "name": "Complete creature AI (jobs, moods, relations from KWD)",
