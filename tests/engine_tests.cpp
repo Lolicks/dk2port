@@ -94,10 +94,28 @@ int main(int argc, char** argv) {
     std::printf("treasury tiles: %d, capacity %.0f\n", treasury_count,
                 game.state().economy.gold_capacity);
     CHECK(treasury_count > 0);
+    CHECK(std::fabs(game.state().economy.gold_capacity -
+                    float(treasury_count) * 10000.0f) < 1.0f);
     CHECK(game.state().economy.gold_capacity > 0);
     CHECK(game.state().economy.deposit(100.0f) == 100.0f);
     CHECK(game.state().economy.withdraw(50.0f));
     CHECK(!game.state().economy.withdraw(100000.0f));
+
+    // Mana income comes from the recovered terrain mana_gain table.
+    {
+        Game m;
+        CHECK(m.load_map(bytes.data(), bytes.size(), nullptr));
+        m.state().mana = 0;
+        Tile* owned = m.state().world.at(1, 1);
+        if (owned) {
+            owned->terrain = static_cast<uint8_t>(TerrainId::ClaimedPath);
+            owned->owner = 0;
+        }
+        for (int i = 0; i < 300; ++i) m.update_magic();
+        std::printf("mana after 300 ticks: %.2f (tiles gain from KWD)\n",
+                    m.state().mana);
+        CHECK(m.state().mana > 0.0f);
+    }
 
     game.load_catalog({"Imp", "Bile Demon"}, {"Treasury"}, {"Sight Of Evil"});
     CHECK(game.state().known_creatures.size() == 2);

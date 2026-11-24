@@ -1,7 +1,7 @@
 # DK2Port — STATUS (auto-generated)
 
 **Updated:** 2026-11-24  
-**Verdict:** Full port in progress: Phase 1 (triggers/AI) and mesh/ANIM fidelity done; AV/UI and FX remaining.
+**Verdict:** Core hardening step 1/10: economy now data-driven (Treasury capacity, mana_gain, gold_value).
 
 ## Build & distribution
 

@@ -708,7 +708,12 @@ void Economy::recalculate(const World& world) {
     for (const Tile& t : world.tiles) {
         if (t.terrain == static_cast<uint8_t>(TerrainId::Treasury)) {
             ++count;
-            cap += 4000.0f;
+            // OWN IMPLEMENTATION: the shipped Treasury record has no explicit
+            // capacity field; its max_health (10000) is used as the per-tile
+            // capacity because it is the only plausible quantity in the KWD.
+            const DK2TerrainDef* def = structures::terrain_for_engine_id(
+                static_cast<int>(t.terrain));
+            cap += def ? float(def->max_health) : 4000.0f;
         }
     }
     treasures = count;
@@ -1037,11 +1042,19 @@ bool Game::research_spell(int spell_index) {
 }
 
 void Game::update_magic() {
-    int hearts = 0;
-    for (const Tile& t : state_.world.tiles)
-        if (t.terrain == static_cast<uint8_t>(TerrainId::DungeonHeart)) ++hearts;
+    // OWN IMPLEMENTATION: KWD terrain mana_gain is a per-tile rate; the
+    // original tick scaling was not recovered. 1/10 of the table value per
+    // game second is used, summed over tiles claimed by player 0.
+    float gain = 0.0f;
+    for (const Tile& t : state_.world.tiles) {
+        if (t.owner != 0 && t.terrain != static_cast<uint8_t>(TerrainId::DungeonHeart))
+            continue;
+        const DK2TerrainDef* def = structures::terrain_for_engine_id(
+            static_cast<int>(t.terrain));
+        gain += def ? float(def->mana_gain) : 0.0f;
+    }
     state_.mana = std::min(state_.mana_max,
-                           state_.mana + 20.0f * kTickSeconds * float(1 + hearts));
+                           state_.mana + gain * 0.1f * kTickSeconds);
     for (float& cd : state_.cooldowns)
         if (cd > 0.0f) cd = std::max(0.0f, cd - kTickSeconds);
     for (unsigned i = 0; i < kDK2SpellCount; ++i)
@@ -1782,8 +1795,9 @@ void Game::update_creature(Creature& c) {
         c.gold_carried < c.max_gold && c.hunger < 80.0f) {
         const DK2TerrainDef* td = structures::terrain_for_engine_id(
             static_cast<int>(tile->terrain));
-        float value = td ? float(structures::terrain_gold_value(td)) : 100.0f;
-        c.gold_carried += (value > 0.0f ? value : 1.0f) * 0.05f * dt;
+        float value = td ? float(structures::terrain_gold_value(td)) : 1000.0f;
+        // OWN IMPLEMENTATION: value/1000 per second per mining rate unit.
+        c.gold_carried += (value / 1000.0f) * state_.config.mining_rate * dt;
         c.job = CreatureJob::Mine;
         gain_xp(c.exp_per_second * 0.2f * dt);
         if (c.gold_carried >= c.max_gold) {

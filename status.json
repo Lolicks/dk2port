@@ -2,7 +2,7 @@
   "project": "Dungeon Keeper II — native iOS port",
   "repository": "https://github.com/Lolicks/dk2port",
   "updated": "2026-11-24",
-  "verdict": "Full port in progress: Phase 1 (triggers/AI) and mesh/ANIM fidelity done; AV/UI and FX remaining.",
+  "verdict": "Core hardening step 1/10: economy now data-driven (Treasury capacity, mana_gain, gold_value).",
   "build": {
     "last_successful_run": "https://github.com/Lolicks/dk2port/actions/runs/45244837079",
     "ipa_size_bytes": 492544759,
