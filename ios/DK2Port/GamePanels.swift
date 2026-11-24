@@ -230,7 +230,7 @@ enum DK2GameArt {
             if let image = DK2UIStyle.image(candidate) { return image }
         }
         if let fallbackName = fallback, let image = DK2UIStyle.image(fallbackName) { return image }
-        return fallback()
+        return DK2GameArt.fallback()
     }
 
     static func tabIcon(_ tab: String, active: Bool = false) -> UIImage? {

@@ -1185,7 +1185,7 @@ struct DK2HiscoresScreen: View {
                         DK2L10nText(id: 2802, style: .hiscoreHead)
                     }
                 }
-                .frame(width: 900, maxWidth: .infinity)
+                .frame(maxWidth: .infinity)
                 .accessibilityIdentifier("hiscoreList")
                 HStack {
                     DK2UIStyle.okButton { nav.goToScreen(.extras) }
@@ -1231,7 +1231,7 @@ struct DK2MoviesScreen: View {
                     }
                     .padding()
                 }
-                .frame(width: 900, maxWidth: .infinity)
+                .frame(maxWidth: .infinity)
                 .accessibilityIdentifier("moviePanel.movieList")
                 HStack {
                     DK2UIStyle.okButton { nav.goToScreen(.extras) }
@@ -1256,7 +1256,7 @@ struct DK2CutsceneLockedScreen: View {
                     DK2VSpace(height: 20, id: "cutsceneLocked.margin")
                     DK2UIStyle.okButton { nav.goToScreen(.movies) }
                 }
-                .frame(width: 900, maxWidth: .infinity)
+                .frame(maxWidth: .infinity)
                 Spacer()
             }
         }
@@ -1279,7 +1279,7 @@ struct DK2CreditsScreen: View {
                     .frame(maxWidth: .infinity)
                     .id(nav.creditsRevision)
                 }
-                .frame(width: 900, maxWidth: .infinity)
+                .frame(maxWidth: .infinity)
                 .accessibilityIdentifier("creditsPanel")
                 .onTapGesture { nav.restartCredits() }
                 HStack {
@@ -1396,7 +1396,7 @@ struct DK2MultiplayerWatchScreen: View {
                     DK2VSpace(height: 20, id: "multiplayerWatch.margin")
                     DK2UIStyle.cancelButton { nav.goToScreen(.multiplayer) }
                 }
-                .frame(width: 600, maxWidth: .infinity)
+                .frame(maxWidth: .infinity)
                 Spacer()
             }
         }
