@@ -2,10 +2,10 @@
   "project": "Dungeon Keeper II — native iOS port",
   "repository": "https://github.com/Lolicks/dk2port",
   "updated": "2026-11-24",
-  "verdict": "Full UI 1:1 built into a fresh IPA: 28 original screens/popups, original texts/fonts, all 24 movies, 71 original GUI icons; UI audit clean (189 text ids, 77 images).",
+  "verdict": "UI screenshot fixes shipped: bitmap text no longer mirrored, DK2 magenta transparency key converted to alpha; fresh IPA built with original GUI icons.",
   "build": {
-    "last_successful_run": "https://github.com/Lolicks/dk2port/actions/runs/45363600509",
-    "ipa_size_bytes": 784554013,
+    "last_successful_run": "https://github.com/Lolicks/dk2port/actions/runs/45471814007",
+    "ipa_size_bytes": 784533575,
     "release": "https://github.com/Lolicks/dk2port/releases/latest",
     "artifact": "DK2Port-IPA",
     "signed": false,
