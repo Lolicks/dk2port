@@ -239,12 +239,15 @@ def mpg123_decode_cmd(mpg123, src, dst):
 
 
 def decode_mpeg(raw_path, wav_path, ffmpeg=None, mpg123=None):
-    if ffmpeg:
-        _run(ffmpeg_decode_cmd(ffmpeg, raw_path, wav_path))
-        return "ffmpeg"
-    if mpg123:
-        _run(mpg123_decode_cmd(mpg123, raw_path, wav_path))
-        return "mpg123"
+    try:
+        if ffmpeg:
+            _run(ffmpeg_decode_cmd(ffmpeg, raw_path, wav_path))
+            return "ffmpeg"
+        if mpg123:
+            _run(mpg123_decode_cmd(mpg123, raw_path, wav_path))
+            return "mpg123"
+    except AudioToolError:
+        return None
     raise AudioToolError("no MPEG decoder available (install ffmpeg or mpg123)")
 
 
@@ -427,6 +430,20 @@ def build(game_root, out, ffmpeg=None, afconvert=None, mpg123=None,
                         fh.write(source_bytes)
                     tmp_wav = raw_path + ".decoded.wav"
                     used = decode_mpeg(raw_path, tmp_wav, ffmpeg, mpg123)
+                    if used is None:
+                        entry = {
+                            "id": ident, "bank": bank, "index": sample["index"],
+                            "name": sample["name"], "codec": "blank",
+                            "source_codec": sample["codec"],
+                            "rate": sample["sample_rate"], "channels": 0,
+                            "duration_ms": 0, "path": None, "wav_source": None,
+                            "critical": False, "reason": "decode_failed",
+                            "bytes": 0, "source_sha256": source_sha,
+                            "output_sha256": None,
+                        }
+                        entries.append(entry)
+                        count["blank"] = count.get("blank", 0) + 1
+                        continue
                     encoders_used.add(used)
                     with open(tmp_wav, "rb") as fh:
                         decoded = fh.read()
