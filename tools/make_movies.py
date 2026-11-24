@@ -15,7 +15,7 @@ TOOL = os.path.join(PORT, "decoder", "build", "dk2tool")
 
 
 def main(argv=None):
-    argv = argv or sys.argv
+    argv = argv or sys.argv[1:]
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--game-root", required=True)
     ap.add_argument("--out", required=True)
