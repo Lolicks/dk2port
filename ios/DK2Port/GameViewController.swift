@@ -55,11 +55,11 @@ final class DK2GameViewController: UIViewController {
         if let data = DK2AssetLoader.gameData {
             bridge.loadCreatures(data.creatureNames, rooms: data.roomNames,
                                  spells: data.keeperSpellNames)
-            bridge.spawnInitialKeeper(3)
         }
 
         do {
             try load(mission)
+            bridge.spawnInitialKeeper(3)
         } catch {
             let label = UILabel(frame: view.bounds)
             label.text = "Failed to load \(mission.name): \(error.localizedDescription)"
