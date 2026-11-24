@@ -878,40 +878,66 @@ int Game::spawn_creature(int species, int x, int y, int team) {
 }
 
 bool Game::build_room(int type, int x, int y, int owner) {
-    Tile* tile = state_.world.at(x, y);
-    if (!tile) return false;
-    if (!terrain_walkable(static_cast<TerrainId>(tile->terrain))) return false;
-    for (const Room& r : state_.rooms)
-        if (r.x == x && r.y == y) return false;
-    Room room;
-    room.x = x;
-    room.y = y;
-    room.owner = owner;
+    const DK2RoomDef* def = (type >= 0 && type < static_cast<int>(state_.known_rooms.size()))
+        ? structures::room_by_name(state_.known_rooms[static_cast<size_t>(type)].c_str())
+        : nullptr;
+    int w = def ? std::max(1, structures::room_recommended_width(def)) : 1;
+    int h = def ? std::max(1, structures::room_recommended_height(def)) : 1;
+    if (x < 0 || y < 0 || x + w > state_.world.width || y + h > state_.world.height)
+        return false;
     TerrainId terrain = TerrainId::Treasury;
-    int cost = -1;
-    if (type >= 0 && type < static_cast<int>(state_.known_rooms.size())) {
-        const std::string& wanted = state_.known_rooms[static_cast<size_t>(type)];
-        for (unsigned i = 0; i < sizeof(kTerrainNames) / sizeof(kTerrainNames[0]); ++i) {
-            std::string a = wanted, b = kTerrainNames[i];
-            std::transform(a.begin(), a.end(), a.begin(), ::tolower);
-            std::transform(b.begin(), b.end(), b.begin(), ::tolower);
-            if (a == b) { terrain = static_cast<TerrainId>(i); break; }
-        }
-        for (size_t i = 0; i < kDK2RoomCostCount; ++i) {
-            std::string a = wanted, b = kDK2RoomCosts[i].name;
-            std::transform(a.begin(), a.end(), a.begin(), ::tolower);
-            std::transform(b.begin(), b.end(), b.begin(), ::tolower);
-            if (a == b) { cost = kDK2RoomCosts[i].gold; break; }
+    if (def) {
+        int tid = structures::stats_terrain_to_engine_id(structures::room_terrain_id(def));
+        if (tid >= 0 && tid < 256) terrain = static_cast<TerrainId>(tid);
+    }
+    for (int dy = 0; dy < h; ++dy)
+        for (int dx = 0; dx < w; ++dx)
+            if (!state_.world.at(x + dx, y + dy)) return false;
+    for (const Room& r : state_.rooms)
+        if (r.x >= x && r.x < x + w && r.y >= y && r.y < y + h) return false;
+    int price = def ? structures::room_gold_cost(def) : -1;
+    int cost = price > 0 ? price * w * h : -1;
+    if (cost > 0 && !state_.economy.withdraw(float(cost))) return false;
+    const DK2TerrainDef* rtdef = structures::terrain_for_engine_id(static_cast<int>(terrain));
+    float hp = (rtdef && rtdef->starting_health > 0) ? float(rtdef->starting_health) : 10000.0f;
+    for (int dy = 0; dy < h; ++dy) {
+        for (int dx = 0; dx < w; ++dx) {
+            Tile* tile = state_.world.at(x + dx, y + dy);
+            tile->terrain = static_cast<uint8_t>(terrain);
+            tile->owner = static_cast<uint8_t>(owner);
+            Room room;
+            room.type = static_cast<int>(terrain);
+            room.x = x + dx; room.y = y + dy; room.owner = owner;
+            room.integrity = room.max_integrity = hp;
+            state_.rooms.push_back(room);
         }
     }
-    // Costs are quoted from the shipped manual; -1 means "not documented".
-    if (cost > 0 && !state_.economy.withdraw(float(cost))) return false;
-    room.type = static_cast<int>(terrain);  // consumers compare TerrainId
-    state_.rooms.push_back(room);
-    tile->terrain = static_cast<uint8_t>(terrain);
-    tile->owner = static_cast<uint8_t>(owner);
     state_.economy.recalculate(state_.world);
     return true;
+}
+
+bool Game::damage_room(int x, int y, float amount) {
+    for (auto it = state_.rooms.begin(); it != state_.rooms.end(); ++it) {
+        if (it->x != x || it->y != y) continue;
+        it->integrity -= amount;
+        if (it->integrity > 0.0f) return true;
+        Tile* tile = state_.world.at(x, y);
+        if (tile) tile->terrain = static_cast<uint8_t>(TerrainId::DirtPath);
+        state_.rooms.erase(it);
+        state_.economy.recalculate(state_.world);
+        return true;
+    }
+    return false;
+}
+
+bool Game::repair_room(int x, int y, float amount) {
+    for (Room& r : state_.rooms) {
+        if (r.x != x || r.y != y) continue;
+        if (r.integrity >= r.max_integrity) return false;
+        r.integrity = std::min(r.max_integrity, r.integrity + amount);
+        return true;
+    }
+    return false;
 }
 
 bool Game::place_trap(int index, int x, int y, int owner) {
@@ -927,6 +953,9 @@ bool Game::place_trap(int index, int x, int y, int owner) {
     trap.type = 1000 + index;   // distinct from room TerrainId
     trap.x = x; trap.y = y; trap.owner = owner;
     trap.integrity = float(structures::trap_health(def));
+    trap.max_integrity = trap.integrity;
+    trap.trap_cooldown = structures::trap_charge_time(def);
+    trap.trap_charges = structures::trap_shots_when_armed(def);
     state_.rooms.push_back(trap);
     return true;
 }
@@ -940,11 +969,14 @@ bool Game::place_door(int index, int x, int y, int owner) {
     if (cost.gold > 0 && !state_.economy.withdraw(float(cost.gold))) return false;
     if (cost.mana > 0 && state_.mana < float(cost.mana)) return false;
     if (cost.mana > 0) state_.mana -= float(cost.mana);
-    Room door;
-    door.type = 2000 + index;
+    for (const Door& d : state_.doors) if (d.x == x && d.y == y) return false;
+    Door door;
+    door.type = def->door_id;
     door.x = x; door.y = y; door.owner = owner;
-    door.integrity = float(structures::door_health(def));
-    state_.rooms.push_back(door);
+    door.integrity = door.max_integrity = float(def->health > 0 ? def->health : 1000);
+    door.secret = structures::door_is_secret(def);
+    door.hero = structures::door_is_hero(def);
+    state_.doors.push_back(door);
     return true;
 }
 
@@ -1062,10 +1094,34 @@ void Game::update_magic() {
             research_spell(static_cast<int>(i));
 }
 
-bool Game::find_path(int sx, int sy, int tx, int ty, std::vector<int>& out) const {
+bool Game::door_blocks(int x, int y, int team) const {
+    for (const Door& d : state_.doors) {
+        if (d.x != x || d.y != y || d.open || d.integrity <= 0.0f) continue;
+        if (d.owner == team) continue;
+        if (d.secret && team != 1) continue;
+        return true;
+    }
+    return false;
+}
+
+bool Game::damage_door(int x, int y, float amount) {
+    for (auto it = state_.doors.begin(); it != state_.doors.end(); ++it) {
+        if (it->x != x || it->y != y) continue;
+        it->integrity -= amount;
+        if (it->integrity > 0.0f) return true;
+        state_.doors.erase(it);
+        return true;
+    }
+    return false;
+}
+
+bool Game::find_path(int sx, int sy, int tx, int ty, std::vector<int>& out, int team) const {
     out.clear();
     const World& world = state_.world;
-    if (!world.walkable(sx, sy) || !world.walkable(tx, ty)) return false;
+    auto passable = [&](int x, int y) {
+        return world.walkable(x, y) && !door_blocks(x, y, team);
+    };
+    if (!passable(sx, sy) || !passable(tx, ty)) return false;
     const int n = world.width * world.height;
     const int start = world.index(sx, sy), goal = world.index(tx, ty);
     if (start == goal) return true;
@@ -1092,9 +1148,9 @@ bool Game::find_path(int sx, int sy, int tx, int ty, std::vector<int>& out) cons
         for (int dy = -1; dy <= 1; ++dy) {
             for (int dx = -1; dx <= 1; ++dx) {
                 if (dx == 0 && dy == 0) continue;
-                if (!world.walkable(cx + dx, cy + dy)) continue;
-                if (dx && dy && (!world.walkable(cx + dx, cy) ||
-                                 !world.walkable(cx, cy + dy)))
+                if (!passable(cx + dx, cy + dy)) continue;
+                if (dx && dy && (!passable(cx + dx, cy) ||
+                                 !passable(cx, cy + dy)))
                     continue;
                 int nb = world.index(cx + dx, cy + dy);
                 float step = (dx && dy) ? 1.41421356f : 1.0f;
@@ -1903,6 +1959,39 @@ void Game::spawn_initial_enemies() {
 }
 
 
+void Game::update_traps() {
+    for (Room& trap : state_.rooms) {
+        if (trap.type < 1000 || trap.type >= 2000) continue;
+        if (trap.trap_cooldown > 0.0f) {
+            trap.trap_cooldown -= kTickSeconds;
+            continue;
+        }
+        if (trap.trap_charges <= 0) continue;
+        const DK2TrapDef* def = structures::trap_by_index(
+            static_cast<size_t>(trap.type - 1000));
+        if (!def) continue;
+        const float radius = (def->trigger == 2) ? 2.5f : 0.75f;
+        Creature* victim = nullptr;
+        float best = radius * radius;
+        for (Creature& c : state_.creatures) {
+            if (c.team == trap.owner || c.state == CreatureState::Dead) continue;
+            float dx = c.x - (float(trap.x) + 0.5f);
+            float dy = c.y - (float(trap.y) + 0.5f);
+            float d2 = dx * dx + dy * dy;
+            if (d2 <= best) { best = d2; victim = &c; }
+        }
+        if (!victim) continue;
+        if (def->mana_cost_to_fire > 0 && state_.mana < float(def->mana_cost_to_fire)) continue;
+        if (def->mana_cost_to_fire > 0) state_.mana -= float(def->mana_cost_to_fire);
+        float damage = def->threat > 0 ? float(def->threat) * 0.5f
+                                       : float(def->health) / 100.0f;
+        victim->hp -= damage;
+        if (victim->hp <= 0.0f) { victim->hp = 0.0f; victim->state = CreatureState::Dead; }
+        --trap.trap_charges;
+        trap.trap_cooldown = structures::trap_recharge_time(def);
+    }
+}
+
 void Game::evaluate_triggers() {
     if (!trigger_runtime_) return;
     dk2trigger::FunctionalTriggerContext ctx;
@@ -1985,6 +2074,7 @@ void Game::step() {
     if (spell_cooldown_left_ > 0)
         spell_cooldown_left_ = std::max(0.0f, spell_cooldown_left_ - kTickSeconds);
     spawn_initial_enemies();
+    update_traps();
     evaluate_triggers();
     update_magic();
     for (Creature& c : state_.creatures) update_creature(c);

@@ -101,6 +101,84 @@ int main(int argc, char** argv) {
     CHECK(game.state().economy.withdraw(50.0f));
     CHECK(!game.state().economy.withdraw(100000.0f));
 
+    // Multi-tile rooms, integrity and destruction.
+    {
+        Game r;
+        CHECK(r.load_map(bytes.data(), bytes.size(), nullptr));
+        r.load_catalog({}, {"Treasury", "Lair", "Portal", "Hatchery",
+                            "Dungeon Heart", "Library"}, {});
+        r.state().economy.gold = 100000;
+        int x = -1, y = -1;
+        for (int yy = 2; yy < r.state().world.height - 4 && x < 0; ++yy)
+            for (int xx = 2; xx < r.state().world.width - 4; ++xx) {
+                bool ok = true;
+                for (int dy = 0; dy < 3 && ok; ++dy)
+                    for (int dx = 0; dx < 3 && ok; ++dx)
+                        ok = r.state().world.walkable(xx + dx, yy + dy);
+                if (ok) { x = xx; y = yy; break; }
+            }
+        CHECK(x >= 0);
+        CHECK(r.build_room(5, x, y, 0));
+        int tiles = 0;
+        for (const Room& room : r.state().rooms)
+            if (room.x >= x && room.x < x + 3 && room.y >= y && room.y < y + 3) ++tiles;
+        std::printf("rooms: multi-tile=%d\n", tiles);
+        CHECK(tiles == 9);
+        CHECK(r.damage_room(x, y, 1000000.0f));
+        CHECK(r.repair_room(x, y, 100.0f) == false);
+    }
+
+    // Doors block enemy pathfinding and carry integrity.
+    {
+        Game d;
+        CHECK(d.load_map(bytes.data(), bytes.size(), nullptr));
+        d.state().economy.gold = 100000;
+        int x = -1, y = -1;
+        for (int yy = 2; yy < d.state().world.height - 2 && x < 0; ++yy)
+            for (int xx = 2; xx < d.state().world.width - 2; ++xx)
+                if (d.state().world.walkable(xx, yy) &&
+                    d.state().world.walkable(xx + 1, yy)) {
+                    x = xx; y = yy; break;
+                }
+        CHECK(x >= 0);
+        CHECK(d.place_door(0, x, y, 0));
+        CHECK(d.door_blocks(x, y, 1));
+        CHECK(!d.door_blocks(x, y, 0));
+        std::vector<int> path;
+        d.find_path(x - 1, y, x + 1, y, path, 1);
+        std::printf("door: blocks=%d bypass=%d\n",
+                    int(d.door_blocks(x, y, 1)), int(!path.empty()));
+        CHECK(d.damage_door(x, y, 100000.0f));
+        CHECK(!d.door_blocks(x, y, 1));
+    }
+
+    // Traps fire from recovered trigger/charge/threat data.
+    {
+        Game t;
+        CHECK(t.load_map(bytes.data(), bytes.size(), nullptr));
+        t.state().economy.gold = 100000;
+        t.state().mana = 10000;
+        int x = -1, y = -1;
+        for (int yy = 2; yy < t.state().world.height - 2 && x < 0; ++yy)
+            for (int xx = 2; xx < t.state().world.width - 2; ++xx)
+                if (t.state().world.walkable(xx, yy) &&
+                    t.state().world.walkable(xx + 1, yy)) {
+                    x = xx; y = yy; break;
+                }
+        CHECK(x >= 0);
+        CHECK(t.place_trap(0, x, y, 0));
+        CHECK(t.spawn_creature(7, x + 1, y, 1) > 0);
+        float hp0 = t.state().creatures.back().hp;
+        int charges0 = t.state().rooms.back().trap_charges;
+        for (int i = 0; i < 300; ++i) t.step();
+        float hp1 = t.state().creatures.back().hp;
+        int charges1 = t.state().rooms.back().trap_charges;
+        std::printf("trap: hp %.0f -> %.0f, charges %d -> %d\n",
+                    hp0, hp1, charges0, charges1);
+        CHECK(hp1 < hp0);
+        CHECK(charges1 < charges0);
+    }
+
     // Mana income comes from the recovered terrain mana_gain table.
     {
         Game m;

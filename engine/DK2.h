@@ -291,6 +291,20 @@ struct Room {
     int x = 0, y = 0;
     int owner = 0;
     float integrity = 100;
+    float max_integrity = 100;
+    float trap_cooldown = 0;
+    int trap_charges = 0;
+};
+
+struct Door {
+    int type = 0;
+    int x = 0, y = 0;
+    int owner = 0;
+    float integrity = 100;
+    float max_integrity = 100;
+    bool secret = false;
+    bool hero = false;
+    bool open = false;
 };
 
 struct Economy {
@@ -325,6 +339,7 @@ struct GameState {
     World world;
     std::vector<Creature> creatures;
     std::vector<Room> rooms;
+    std::vector<Door> doors;
     std::vector<std::string> known_creatures;
     std::vector<std::string> known_rooms;
     std::vector<std::string> known_spells;
@@ -364,7 +379,13 @@ public:
     bool cast_spell(int spell_index, int x, int y);
     bool research_spell(int spell_index);
     void update_magic();
-    bool find_path(int sx, int sy, int tx, int ty, std::vector<int>& out) const;
+    bool find_path(int sx, int sy, int tx, int ty, std::vector<int>& out,
+                   int team = 0) const;
+    bool door_blocks(int x, int y, int team) const;
+    bool damage_door(int x, int y, float amount);
+    bool damage_room(int x, int y, float amount);
+    bool repair_room(int x, int y, float amount);
+    void update_traps();
     void step();
     void evaluate_triggers();
 
