@@ -228,12 +228,12 @@ final class DK2EffectsRenderer {
 
         let names = DK2AssetLoader.gameData?.creatureNames ?? Self.fallbackCreatureNames
         self.meshStore = DK2MeshStore(device: device, assetRoot: assetRoot,
+                                      creatureNames: names)
 
         settingsToken = NotificationCenter.default.addObserver(
             forName: DK2Settings.renderingDidChange, object: nil, queue: .main)
             { [weak self] _ in self?.applyRenderSettings() }
         applyRenderSettings()
-                                      creatureNames: names)
     }
 
     // MARK: Pipeline construction
