@@ -248,9 +248,13 @@ enum DK2FontRenderer {
                                                              width: CGFloat(sourceWidth),
                                                              height: CGFloat(sourceHeight)))
                 else { continue }
-                context.draw(crop, in: CGRect(x: CGFloat(item.x), y: CGFloat(item.y),
+                context.saveGState()
+                context.translateBy(x: CGFloat(item.x + sourceWidth), y: CGFloat(item.y))
+                context.scaleBy(x: -1, y: 1)
+                context.draw(crop, in: CGRect(x: 0, y: 0,
                                               width: CGFloat(sourceWidth),
                                               height: CGFloat(sourceHeight)))
+                context.restoreGState()
             }
             context.setBlendMode(.sourceIn)
             context.setFillColor(uiColor.cgColor)

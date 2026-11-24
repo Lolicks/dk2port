@@ -59,6 +59,8 @@ jobs:
           python3 tools/build_audio.py --game-root game \
             --out build/Assets
           cp -R build/Assets/audio ios/DK2Port/Resources/Assets/audio
+          python3 -m pip install --user pillow || python3 -m pip install --user --break-system-packages pillow
+          python3 tools/fix_png_transparency.py ios/DK2Port/Resources/Assets
           python3 tools/make_integrity.py ios/DK2Port/Resources \
             ios/DK2Port/Resources/Assets/integrity.json
           du -sh ios/DK2Port/Resources
