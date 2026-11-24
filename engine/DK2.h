@@ -282,6 +282,9 @@ struct Creature {
     int ai_flags = 0;
     int battle_id = -1;
     float battle_leave_time = -1.0f;
+    int worker_task_id = -1;
+    int worker_task_x = -1, worker_task_y = -1;
+    float worker_task_progress = 0.0f;
 
     // --- Death / decomposition --------------------------------------------
     float death_timer = 0.0f;
@@ -308,6 +311,20 @@ struct Door {
     bool secret = false;
     bool hero = false;
     bool open = false;
+};
+
+enum class WorkerTaskType : uint8_t {
+    DigTile = 0,
+    ClaimTile = 1,
+    RepairWall = 2,
+    HaulGold = 3,
+};
+
+struct WorkerTask {
+    WorkerTaskType type = WorkerTaskType::DigTile;
+    int x = 0, y = 0;
+    int assigned = -1;
+    float progress = 0.0f;
 };
 
 struct Battle {
@@ -352,6 +369,7 @@ struct GameState {
     std::vector<Room> rooms;
     std::vector<Door> doors;
     std::vector<Battle> battles;
+    std::vector<WorkerTask> worker_tasks;
     std::vector<std::string> known_creatures;
     std::vector<std::string> known_rooms;
     std::vector<std::string> known_spells;
@@ -397,6 +415,7 @@ public:
     bool damage_door(int x, int y, float amount);
     bool should_flee_or_attack(Creature& c, int cx, int cy);
     void update_battles();
+    void update_worker_tasks();
     bool damage_room(int x, int y, float amount);
     bool repair_room(int x, int y, float amount);
     void update_traps();

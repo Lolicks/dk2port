@@ -2,7 +2,7 @@
   "project": "Dungeon Keeper II — native iOS port",
   "repository": "https://github.com/Lolicks/dk2port",
   "updated": "2026-11-24",
-  "verdict": "Core hardening step 5/10: OpenKeeper AI rules ported (flags, flee/battle, CombatRules, 8 attacker caps).",
+  "verdict": "Core hardening step 6/10: OpenKeeper worker tasks ported (dig, claim, repair, haul gold).",
   "build": {
     "last_successful_run": "https://github.com/Lolicks/dk2port/actions/runs/45244837079",
     "ipa_size_bytes": 734290169,
@@ -65,7 +65,7 @@
     {
       "name": "C++ core: fixed-step loop, A*, economy, combat, magic",
       "state": "partial",
-      "evidence": "engine/DK2.cpp; data-driven economy, multi-tile rooms, traps/doors, OpenKeeper AI flags/flee/battle/CombatRules, save v5"
+      "evidence": "engine/DK2.cpp; data-driven economy, multi-tile rooms, traps/doors, OpenKeeper AI/battle, worker tasks dig/claim/repair/haul, save v5"
     },
     {
       "name": "Metal tile renderer + touch camera controls",

@@ -1335,6 +1335,190 @@ bool Game::should_flee_or_attack(Creature& c, int cx, int cy) {
     return false;
 }
 
+void Game::update_worker_tasks() {
+    auto tile = [&](int x, int y) -> Tile* { return state_.world.at(x, y); };
+    auto adjacent_walkable = [&](int x, int y, int team, int& out_x, int& out_y) {
+        static const int dxs[8] = {1, -1, 0, 0, 1, 1, -1, -1};
+        static const int dys[8] = {0, 0, 1, -1, 1, -1, 1, -1};
+        float best = 1.0e9f;
+        bool found = false;
+        for (int i = 0; i < 8; ++i) {
+            int nx = x + dxs[i], ny = y + dys[i];
+            if (!state_.world.walkable(nx, ny)) continue;
+            if (door_blocks(nx, ny, team)) continue;
+            for (const Creature& c : state_.creatures) {
+                if (c.worker_task_x == nx && c.worker_task_y == ny) continue;
+            }
+            float d = float(nx * nx + ny * ny);
+            if (!found || d < best) { best = d; out_x = nx; out_y = ny; found = true; }
+        }
+        return found;
+    };
+    for (WorkerTask& task : state_.worker_tasks) {
+        if (task.assigned < 0) continue;
+        bool alive = false;
+        for (const Creature& c : state_.creatures)
+            if (c.id == task.assigned && c.state != CreatureState::Dead &&
+                c.job != CreatureJob::Fight && c.job != CreatureJob::Flee) { alive = true; break; }
+        if (!alive) {
+            for (Creature& c : state_.creatures)
+                if (c.id == task.assigned) { c.worker_task_id = -1; c.worker_task_x = c.worker_task_y = -1; }
+            task.assigned = -1;
+        }
+    }
+    for (Creature& c : state_.creatures) {
+        if (c.species != 0 || c.state == CreatureState::Dead ||
+            c.job == CreatureJob::Fight || c.job == CreatureJob::Flee ||
+            c.hunger > kHungerEatThreshold || c.fatigue > kFatigueSleepThreshold)
+            continue;
+        WorkerTask* task = nullptr;
+        for (WorkerTask& t : state_.worker_tasks) if (t.assigned == c.id) { task = &t; break; }
+        if (!task) {
+            for (WorkerTask& t : state_.worker_tasks) {
+                if (t.assigned >= 0) continue;
+                task = &t; task->assigned = c.id; break;
+            }
+        }
+        int cx = std::max(0, std::min(state_.world.width - 1, int(c.x)));
+        int cy = std::max(0, std::min(state_.world.height - 1, int(c.y)));
+        if (!task) {
+            if (c.gold_carried > 0.0f) {
+                WorkerTask t; t.type = WorkerTaskType::HaulGold;
+                t.x = cx; t.y = cy; t.assigned = c.id;
+                state_.worker_tasks.push_back(t);
+                task = &state_.worker_tasks.back();
+                set_job(c, CreatureJob::HaulGold, state_.elapsed);
+            } else {
+                for (int i = -1; i <= 1; ++i) {
+                    int another = (cx + i + state_.world.width) % state_.world.width;
+                    for (int j = -1; j <= 1; ++j) {
+                        int ty = (cy + j + state_.world.height) % state_.world.height;
+                        Tile* t = tile(another, ty);
+                        if (!t) continue;
+                        TerrainId terr = static_cast<TerrainId>(t->terrain);
+                        if ((t->flags & 0x01) && !terrain_walkable(terr)) {
+                            WorkerTask wt; wt.type = WorkerTaskType::DigTile;
+                            wt.x = another; wt.y = ty; wt.assigned = c.id;
+                            state_.worker_tasks.push_back(wt);
+                            task = &state_.worker_tasks.back();
+                            break;
+                        }
+                    }
+                    if (task) break;
+                }
+            }
+        }
+        if (!task) {
+            for (int i = 0; i < state_.world.tiles.size(); ++i) {
+                Tile* t = &state_.world.tiles[i];
+                TerrainId terr = static_cast<TerrainId>(t->terrain);
+                int tx = int(i % state_.world.width), ty = int(i / state_.world.width);
+                if (terr == TerrainId::ReinforcedWall && t->surface < 100) {
+                    WorkerTask wt; wt.type = WorkerTaskType::RepairWall;
+                    wt.x = tx; wt.y = ty; wt.assigned = c.id;
+                    state_.worker_tasks.push_back(wt);
+                    task = &state_.worker_tasks.back();
+                    break;
+                }
+                if (t->owner != uint8_t(c.team) && terrain_walkable(terr) &&
+                    terr != TerrainId::Water && terr != TerrainId::Lava) {
+                    WorkerTask wt; wt.type = WorkerTaskType::ClaimTile;
+                    wt.x = tx; wt.y = ty; wt.assigned = c.id;
+                    state_.worker_tasks.push_back(wt);
+                    task = &state_.worker_tasks.back();
+                    break;
+                }
+            }
+        }
+        if (!task) continue;
+        c.worker_task_id = 1;
+        c.worker_task_x = task->x;
+        c.worker_task_y = task->y;
+        int tx = task->x, ty = task->y;
+        int stand_x = tx, stand_y = ty;
+        if (task->type == WorkerTaskType::DigTile || task->type == WorkerTaskType::RepairWall) {
+            if (!adjacent_walkable(tx, ty, c.team, stand_x, stand_y)) continue;
+        }
+        float dx = float(stand_x) + 0.5f - c.x;
+        float dy = float(stand_y) + 0.5f - c.y;
+        float d2 = dx * dx + dy * dy;
+        if (d2 > 0.36f) {
+            if (c.path.empty() || c.target_x != stand_x || c.target_y != stand_y) {
+                std::vector<int> path;
+                if (find_path(cx, cy, stand_x, stand_y, path, c.team)) {
+                    c.path = std::move(path);
+                    c.path_index = 0;
+                    c.target_x = stand_x;
+                    c.target_y = stand_y;
+                    c.state = CreatureState::Walking;
+                }
+            }
+            continue;
+        }
+        task->progress += kTickSeconds;
+        if (task->progress < 1.0f) continue;
+        task->progress -= 1.0f;
+        Tile* target = tile(tx, ty);
+        if (!target) continue;
+        if (task->type == WorkerTaskType::DigTile) {
+            const DK2TerrainDef* def = structures::terrain_for_engine_id(int(target->terrain));
+            float damage = 100.0f;
+            if (def && def->damage > 0) damage = float(def->damage) * 0.1f;
+            target->surface = uint8_t(std::max(0, int(target->surface) - int(damage)));
+            if (target->surface == 0) {
+                TerrainId old = static_cast<TerrainId>(target->terrain);
+                if (old == TerrainId::Gold || old == TerrainId::Gems) {
+                    float value = def ? float(structures::terrain_gold_value(def)) : 1000.0f;
+                    c.gold_carried += value;
+                }
+                target->terrain = uint8_t(TerrainId::DirtPath);
+                target->owner = uint8_t(c.team);
+                target->flags &= uint8_t(~0x01);
+                state_.economy.recalculate(state_.world);
+                task->assigned = -1;
+            }
+        } else if (task->type == WorkerTaskType::ClaimTile) {
+            target->surface = uint8_t(std::max(0, int(target->surface) - 25));
+            if (target->surface == 0) {
+                target->owner = uint8_t(c.team);
+                if (static_cast<TerrainId>(target->terrain) == TerrainId::DirtPath)
+                    target->terrain = uint8_t(TerrainId::ClaimedPath);
+                task->assigned = -1;
+            }
+        } else if (task->type == WorkerTaskType::RepairWall) {
+            target->surface = uint8_t(std::min(255, int(target->surface) + 25));
+            if (target->surface >= 100) task->assigned = -1;
+        } else if (task->type == WorkerTaskType::HaulGold) {
+            float deposited = state_.economy.deposit(c.gold_carried);
+            c.gold_carried -= deposited;
+            task->assigned = -1;
+            set_job(c, CreatureJob::Idle, state_.elapsed);
+        }
+        if (task->assigned < 0) {
+            c.worker_task_id = -1;
+            c.worker_task_x = c.worker_task_y = -1;
+            c.target_x = c.target_y = -1;
+        }
+    }
+    for (auto it = state_.worker_tasks.begin(); it != state_.worker_tasks.end();) {
+        bool assigned = false;
+        for (const Creature& c : state_.creatures) if (c.id == it->assigned) { assigned = true; break; }
+        bool valid = false;
+        Tile* t = tile(it->x, it->y);
+        if (t) {
+            if (it->type == WorkerTaskType::DigTile)
+                valid = (t->flags & 0x01) != 0;
+            else if (it->type == WorkerTaskType::ClaimTile)
+                valid = t->owner != 0;
+            else if (it->type == WorkerTaskType::RepairWall)
+                valid = t->terrain == uint8_t(TerrainId::ReinforcedWall) && t->surface < 100;
+            else
+                valid = true;
+        }
+        if (!assigned || !valid) it = state_.worker_tasks.erase(it); else ++it;
+    }
+}
+
 void Game::update_battles() {
     auto by_id = [&](int id) -> Creature* {
         for (Creature& c : state_.creatures) if (c.id == id) return &c;
@@ -1624,6 +1808,7 @@ void Game::update_imp_planner(Creature& c, int cx, int cy) {
 
 void Game::choose_mood_job(Creature& c, int cx, int cy) {
     (void)cx; (void)cy;
+    if (c.worker_task_id >= 0) return;
     if (!c.possessed && c.job == CreatureJob::Fight && c.path.empty() &&
         c.attacking_id < 0)
         set_job(c, CreatureJob::Idle, state_.elapsed);
@@ -1886,7 +2071,8 @@ void Game::update_creature(Creature& c) {
     choose_mood_job(c, cx, cy);
 
     /* --- utility-state path, then ordinary job target -------------------- */
-    if (!update_utility_path(c, cx, cy) && c.target_x < 0 && c.path.empty()) {
+    if (c.worker_task_id < 0 && !update_utility_path(c, cx, cy) &&
+        c.target_x < 0 && c.path.empty()) {
         int tx = cx, ty = cy;
         bool have_target = false;
         int room_type = 0;
@@ -2206,6 +2392,7 @@ void Game::step() {
         spell_cooldown_left_ = std::max(0.0f, spell_cooldown_left_ - kTickSeconds);
     spawn_initial_enemies();
     update_traps();
+    update_worker_tasks();
     update_battles();
     evaluate_triggers();
     update_magic();

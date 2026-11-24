@@ -257,6 +257,72 @@ int main(int argc, char** argv) {
     CHECK(game.state().camera.center_x >= 0.f);
 
     // Real stats recovered from Creatures.kwd via dk2-tools templates.
+    // OpenKeeper worker tasks: dig, claim and haul gold.
+    {
+        Game w;
+        CHECK(w.load_map(bytes.data(), bytes.size(), nullptr));
+        int sx = -1, sy = -1, tx = -1, ty = -1;
+        for (int yy = 1; yy < w.state().world.height - 1 && tx < 0; ++yy)
+            for (int xx = 1; xx < w.state().world.width - 1; ++xx) {
+                if (!w.state().world.walkable(xx, yy)) continue;
+                for (int dy = -1; dy <= 1 && tx < 0; ++dy)
+                    for (int dx = -1; dx <= 1 && tx < 0; ++dx) {
+                        if (!dx && !dy) continue;
+                        Tile* t = w.state().world.at(xx + dx, yy + dy);
+                        if (!t || terrain_walkable(static_cast<TerrainId>(t->terrain))) continue;
+                        sx = xx; sy = yy; tx = xx + dx; ty = yy + dy;
+                    }
+            }
+        CHECK(tx >= 0);
+        w.state().world.at(tx, ty)->flags |= 0x01;
+        int imp = w.spawn_creature(0, sx, sy, 0);
+        CHECK(imp > 0);
+        for (int i = 0; i < 900; ++i) w.step();
+        Tile* dug = w.state().world.at(tx, ty);
+        std::printf("worker: dig terrain=%d gold=%.0f\n", int(dug->terrain),
+                    w.state().creatures[0].gold_carried);
+        CHECK(dug->terrain == uint8_t(TerrainId::DirtPath));
+        CHECK((dug->flags & 0x01) == 0);
+    }
+    {
+        Game w;
+        CHECK(w.load_map(bytes.data(), bytes.size(), nullptr));
+        for (Tile& t : w.state().world.tiles) {
+            t.flags &= uint8_t(~0x01);
+            if (terrain_walkable(static_cast<TerrainId>(t.terrain))) t.owner = 0;
+        }
+        int sx = -1, sy = -1, tx = -1, ty = -1;
+        for (int yy = 2; yy < w.state().world.height - 2 && tx < 0; ++yy)
+            for (int xx = 2; xx < w.state().world.width - 2; ++xx)
+                if (w.state().world.walkable(xx, yy) &&
+                    w.state().world.walkable(xx + 1, yy)) { sx = xx; sy = yy; tx = xx + 1; ty = yy; break; }
+        CHECK(tx >= 0);
+        w.state().world.at(tx, ty)->owner = 2;
+        int imp = w.spawn_creature(0, sx, sy, 0);
+        CHECK(imp > 0);
+        for (int i = 0; i < 900; ++i) w.step();
+        std::printf("worker: claim owner=%d\n", int(w.state().world.at(tx, ty)->owner));
+        CHECK(w.state().world.at(tx, ty)->owner == 0);
+    }
+    {
+        Game w;
+        CHECK(w.load_map(bytes.data(), bytes.size(), nullptr));
+        int sx = -1, sy = -1;
+        for (int yy = 2; yy < w.state().world.height - 2 && sx < 0; ++yy)
+            for (int xx = 2; xx < w.state().world.width - 2; ++xx)
+                if (w.state().world.walkable(xx, yy)) { sx = xx; sy = yy; break; }
+        CHECK(sx >= 0);
+        w.spawn_creature(0, sx, sy, 0);
+        w.state().creatures[0].gold_carried = 500.0f;
+        w.state().economy.gold_capacity = 100000.0f;
+        float gold0 = w.state().economy.gold;
+        for (int i = 0; i < 300; ++i) w.step();
+        std::printf("worker: haul gold %.0f -> %.0f carried=%.0f\n",
+                    gold0, w.state().economy.gold, w.state().creatures[0].gold_carried);
+        CHECK(w.state().economy.gold > gold0);
+        CHECK(w.state().creatures[0].gold_carried < 500.0f);
+    }
+
     // OpenKeeper rules: always-flee flag and battle grouping.
     {
         Game ai;
