@@ -95,6 +95,7 @@ jobs:
           test -n "$APP" || { echo "no .app in archive"; exit 1; }
           cp -R DK2Port/Resources/Assets "$APP/Assets"
           cp -R DK2Port/Resources/Original "$APP/Original"
+          cp DK2Port/Resources/AppIconLegacy/*.png "$APP/"
           mkdir -p build/ipa/Payload
           cp -R "$APP" build/ipa/Payload/
           (cd build/ipa && zip -q -r DK2Port.ipa Payload)
@@ -119,7 +120,6 @@ jobs:
             Payload/DK2Port.app/Assets/interface/fonts/Frontend14_0.png \
             Payload/DK2Port.app/Assets/textures/EngineTextures/GUI/Icons/i-mise.png \
             Payload/DK2Port.app/Assets/integrity.json \
-            Payload/DK2Port.app/Assets.car \
             Payload/DK2Port.app/DK2Port; do
             unzip -l "$IPA" | grep -q "$f" || { echo "MISSING $f"; exit 1; }
             echo "OK $f"

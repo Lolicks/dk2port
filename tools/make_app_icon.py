@@ -2,6 +2,7 @@
 """Generate the iOS app icon from the original Horned Reaper artwork."""
 import json
 import os
+import shutil
 
 from PIL import Image, ImageDraw
 
@@ -9,6 +10,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 SOURCE = os.path.join(ROOT, "build", "Assets", "textures", "EngineTextures", "reaper.png")
 OUT = os.path.join(ROOT, "ios", "DK2Port", "Resources", "Assets.xcassets", "AppIcon.appiconset")
+LEGACY = os.path.join(ROOT, "ios", "DK2Port", "Resources", "AppIconLegacy")
 
 SIZES = [
     ("icon-20@2x.png", 40), ("icon-20@3x.png", 60),
@@ -56,6 +58,11 @@ def main():
         if scale:
             entry["scale"] = scale
         images.append(entry)
+    os.makedirs(LEGACY, exist_ok=True)
+    for filename, _size in SIZES:
+        shutil.copyfile(os.path.join(OUT, filename),
+                        os.path.join(LEGACY, filename.replace("icon-", "Icon-")))
+
     with open(os.path.join(OUT, "Contents.json"), "w", encoding="utf-8") as fh:
         json.dump({"images": images, "info": {"author": "dk2port", "version": 1}},
                   fh, indent=2)
