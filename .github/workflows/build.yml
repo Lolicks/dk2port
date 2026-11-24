@@ -9,6 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: true
       - name: Python tests
         run: python3 -m unittest tests.test_save tests.test_decompiled_mapping -v
       - name: Original UI text decoder self-test

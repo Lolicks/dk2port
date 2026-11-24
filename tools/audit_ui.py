@@ -8,7 +8,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-OPENKEEPER = os.path.join(ROOT, "research", "OpenKeeper", "assets", "Interface")
+OPENKEEPER = os.path.join(ROOT, "tools", "uigen", "ui_xml")
 ASSETS = os.path.join(ROOT, "build", "Assets")
 TEXT = os.path.join(ROOT, "ios", "DK2Port", "Resources", "Assets", "interface", "Text.properties")
 
