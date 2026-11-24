@@ -5,8 +5,8 @@
 
 ## Build & distribution
 
-- Last successful CI run: https://github.com/Lolicks/dk2port/actions/runs/45305889452
-- IPA size: 734,290,169 bytes (700.3 MiB)
+- Last successful CI run: https://github.com/Lolicks/dk2port/actions/runs/45244837079
+- IPA size: 492,544,759 bytes (469.7 MiB)
 - Permanent download: https://github.com/Lolicks/dk2port/releases/latest (asset `DK2Port-IPA`)
 - Signed: **NO** — Unsigned IPA; user re-signs with Sideloadly.
 - Verified on iPhone 12 mini: **NO** — Installation and gameplay are verified by the user, not by CI.
