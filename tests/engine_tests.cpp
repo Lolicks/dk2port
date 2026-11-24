@@ -224,7 +224,7 @@ int main(int argc, char** argv) {
     if (sx >= 0 && tx >= 0) {
         Game combat;
         CHECK(combat.load_map(bytes.data(), bytes.size(), nullptr));
-        int keeper = combat.spawn_creature(0, sx, sy, 0);
+        int keeper = combat.spawn_creature(1, sx, sy, 0);
         int hero = combat.spawn_creature(7, sx, sy, 1);
         CHECK(keeper > 0 && hero > 0);
         for (int i = 0; i < 600; ++i) combat.step();
@@ -257,6 +257,51 @@ int main(int argc, char** argv) {
     CHECK(game.state().camera.center_x >= 0.f);
 
     // Real stats recovered from Creatures.kwd via dk2-tools templates.
+    // OpenKeeper rules: always-flee flag and battle grouping.
+    {
+        Game ai;
+        CHECK(ai.load_map(bytes.data(), bytes.size(), nullptr));
+        int x = -1, y = -1;
+        for (int yy = 2; yy < ai.state().world.height - 2 && x < 0; ++yy)
+            for (int xx = 2; xx < ai.state().world.width - 2; ++xx)
+                if (ai.state().world.walkable(xx, yy) &&
+                    ai.state().world.walkable(xx + 1, yy)) { x = xx; y = yy; break; }
+        CHECK(x >= 0);
+        int imp = ai.spawn_creature(0, x, y, 0);
+        int hero = ai.spawn_creature(1, x + 1, y, 1);
+        CHECK(imp > 0 && hero > 0);
+        ai.state().creatures[1].threat = 10000.0f;
+        ai.step();
+        bool fled = ai.state().creatures[0].job == CreatureJob::Flee ||
+                    ai.state().creatures[0].state == CreatureState::Fleeing;
+        std::printf("ai: imp_fled=%d\n", int(fled));
+        CHECK(fled);
+    }
+    {
+        Game bat;
+        CHECK(bat.load_map(bytes.data(), bytes.size(), nullptr));
+        int x = -1, y = -1;
+        for (int yy = 2; yy < bat.state().world.height - 2 && x < 0; ++yy)
+            for (int xx = 2; xx < bat.state().world.width - 2; ++xx)
+                if (bat.state().world.walkable(xx, yy) &&
+                    bat.state().world.walkable(xx + 1, yy)) { x = xx; y = yy; break; }
+        CHECK(x >= 0);
+        int a = bat.spawn_creature(1, x, y, 0);
+        int b = bat.spawn_creature(1, x + 1, y, 1);
+        CHECK(a > 0 && b > 0);
+        bat.state().creatures[0].attacking_id = b;
+        bat.state().creatures[1].attacking_id = a;
+        for (int i = 0; i < 10; ++i) bat.step();
+        std::printf("ai: battles=%zu members=%zu states=%d/%d attacks=%d/%d\n",
+                    bat.state().battles.size(),
+                    bat.state().battles.empty() ? 0 : bat.state().battles[0].members.size(),
+                    int(bat.state().creatures[0].state), int(bat.state().creatures[1].state),
+                    bat.state().creatures[0].attacking_id,
+                    bat.state().creatures[1].attacking_id);
+        CHECK(!bat.state().battles.empty());
+        CHECK(bat.state().battles[0].members.size() >= 2);
+    }
+
     {
         Game real;
         CHECK(real.load_map(bytes.data(), bytes.size(), nullptr));

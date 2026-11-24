@@ -1,12 +1,12 @@
 # DK2Port — STATUS (auto-generated)
 
 **Updated:** 2026-11-24  
-**Verdict:** Core hardening step 1/10: economy now data-driven (Treasury capacity, mana_gain, gold_value).
+**Verdict:** Core hardening step 5/10: OpenKeeper AI rules ported (flags, flee/battle, CombatRules, 8 attacker caps).
 
 ## Build & distribution
 
 - Last successful CI run: https://github.com/Lolicks/dk2port/actions/runs/45244837079
-- IPA size: 492,544,759 bytes (469.7 MiB)
+- IPA size: 734,290,169 bytes (700.3 MiB)
 - Permanent download: https://github.com/Lolicks/dk2port/releases/latest (asset `DK2Port-IPA`)
 - Signed: **NO** — Unsigned IPA; user re-signs with Sideloadly.
 - Verified on iPhone 12 mini: **NO** — Installation and gameplay are verified by the user, not by CI.
@@ -33,7 +33,7 @@
 | Full game-state serialization | DONE | DK2S v4: flags/timers/objective/time-limit + full creature/economy state |
 | Original grid simulation in game loop | DONE | FUN_00448d80 arithmetic, 49 ms gate in Game::step() |
 | Custom save system (v5 container, slots, autosave) | DONE | engine/SaveFile.*, DK2SaveManager.swift, SaveSlotsView.swift; CRC/legacy tests OK |
-| C++ core: fixed-step loop, A*, economy, combat, magic | PARTIAL | engine/DK2.cpp; full AI stats, combat cooldown, traps/doors, grid sim, save v4 |
+| C++ core: fixed-step loop, A*, economy, combat, magic | PARTIAL | engine/DK2.cpp; data-driven economy, multi-tile rooms, traps/doors, OpenKeeper AI flags/flee/battle/CombatRules, save v5 |
 | Metal tile renderer + touch camera controls | PARTIAL | MetalRenderer.swift; atlas path and time uniform fixed; compile-only check pending |
 | Cutscene/video playback in iOS UI | PARTIAL | CutsceneView.swift + Intro menu button; PNG frames produced in final build from TQI |
 | In-game audio (SDT -> AAC/PCM, positional mixer) | PARTIAL | tools/build_audio.py ready (self-test OK); AAC artifacts produced in final build only |

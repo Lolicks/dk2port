@@ -128,6 +128,7 @@ struct Creature {
     int team = 0;  // 0 = keeper's dungeon, 1 = invading hero
     CreatureState state = CreatureState::Idle;
     float x = 0, y = 0;
+    float facing = 0.0f;
     float hp = 100, max_hp = 100;
     float damage = 12;
     float attack_cooldown = 0.0f;
@@ -278,7 +279,9 @@ struct Creature {
     int attract_room[3]{0, 0, 0}, attract_size[3]{0, 0, 0};
     int resist_type[4]{0, 0, 0, 0};
     float resist_value[4]{0.0f, 0.0f, 0.0f, 0.0f};
-    int ai_flags = 0;  // bit 1 worker, 2 always-flee, 4 fearless, ...
+    int ai_flags = 0;
+    int battle_id = -1;
+    float battle_leave_time = -1.0f;
 
     // --- Death / decomposition --------------------------------------------
     float death_timer = 0.0f;
@@ -305,6 +308,14 @@ struct Door {
     bool secret = false;
     bool hero = false;
     bool open = false;
+};
+
+struct Battle {
+    int id = 0;
+    std::vector<int> members;
+    std::vector<int> owners;
+    float center_x = 0.0f;
+    float center_y = 0.0f;
 };
 
 struct Economy {
@@ -340,6 +351,7 @@ struct GameState {
     std::vector<Creature> creatures;
     std::vector<Room> rooms;
     std::vector<Door> doors;
+    std::vector<Battle> battles;
     std::vector<std::string> known_creatures;
     std::vector<std::string> known_rooms;
     std::vector<std::string> known_spells;
@@ -383,6 +395,8 @@ public:
                    int team = 0) const;
     bool door_blocks(int x, int y, int team) const;
     bool damage_door(int x, int y, float amount);
+    bool should_flee_or_attack(Creature& c, int cx, int cy);
+    void update_battles();
     bool damage_room(int x, int y, float amount);
     bool repair_room(int x, int y, float amount);
     void update_traps();

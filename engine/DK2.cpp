@@ -322,15 +322,22 @@ constexpr uint32_t kSaveVersion = 4;
 constexpr uint32_t kSaveExtMagic = 0x454b3244;  // "DK2E" trailer
 constexpr uint32_t kSaveExtMagic2 = 0x464b3244;  // "DK2F" v5 extension trailer
 
-// AI flags recovered from the Creatures.kwd boolean fields.
-[[maybe_unused]] constexpr int kAIFlagWorker       = 1 << 0;
-constexpr int kAIFlagAlwaysFlee   = 1 << 1;
-constexpr int kAIFlagFearless     = 1 << 2;
-[[maybe_unused]] constexpr int kAIFlagCanBeSlapped = 1 << 3;
-[[maybe_unused]] constexpr int kAIFlagEvil         = 1 << 4;
-[[maybe_unused]] constexpr int kAIFlagDeadBody     = 1 << 5;
-[[maybe_unused]] constexpr int kAIFlagUnique       = 1 << 6;
-[[maybe_unused]] constexpr int kAIFlagCanFly       = 1 << 7;
+// Creature flags from OpenKeeper Creature.CreatureFlag (KWD bytes).
+constexpr int kAIFlagWorker               = 0x00000001;
+constexpr int kAIFlagAlwaysFlee           = 0x00000008;
+constexpr int kAIFlagFearless             = 0x00040000;
+constexpr int kAIFlagHorny                = 0x00004000;
+constexpr int kAIFlagOnlyAttackableHorny  = 0x00400000;
+constexpr int kCreatureFlagCanBeSlapped   = 0x00000004;
+
+constexpr int kFightStyleNonFighter = 0;
+constexpr float kCriticalHealthPercent = 20.0f;
+constexpr float kCallToArmsFightDistance = 5.0f;
+constexpr int kMaxMeleeAttackers = 8;
+constexpr int kMaxRangedAttackers = 8;
+constexpr int kMaxBattles = 8;
+constexpr float kBattleJoinDistanceSquared = 5.0f * 5.0f;
+constexpr float kMinBattleTime = 4.0f;
 
 // --- Reconstructed thresholds ------------------------------------------------
 // LOW confidence: these numbers were carried over from the previous build and
@@ -368,6 +375,29 @@ static int battle_override_value(const Creature& c) {
     if (v == 0x02 && c.battle_state_index2 >= 0 && c.battle_state_index2 < kBattleTableRows)
         v = kBattleOverrideTable[c.battle_state_index2];
     return v;
+}
+
+static bool can_be_hurt_by(int attacker_flags, int target_flags) {
+    if (target_flags & kAIFlagHorny) return false;
+    if ((target_flags & kAIFlagOnlyAttackableHorny) &&
+        !(attacker_flags & kAIFlagHorny)) return false;
+    return true;
+}
+
+static float rear_attack_bonus(float damage, const Creature& attacker,
+                               const Creature& target) {
+    float dx = attacker.x - target.x;
+    float dy = attacker.y - target.y;
+    float len = std::sqrt(dx * dx + dy * dy);
+    if (len <= 0.0f) return damage;
+    float facing_x = std::sin(target.facing);
+    float facing_y = std::cos(target.facing);
+    float cos_angle = (facing_x * dx + facing_y * dy) / len;
+    cos_angle = std::max(-1.0f, std::min(1.0f, cos_angle));
+    int steps = std::min(1023, int(std::acos(cos_angle) / 3.14159265f * 1024.0f));
+    int percent = steps / 20;
+    if (percent < 16) return damage;
+    return damage * (100.0f + float(percent)) / 100.0f;
 }
 
 // FUN_00478800: dispatch one CState id to its state process function.  The
@@ -1259,14 +1289,130 @@ void Game::update_pay(Creature& c) {
     }
 }
 
+bool Game::should_flee_or_attack(Creature& c, int cx, int cy) {
+    const Tile* tile = state_.world.at(cx, cy);
+    bool in_dungeon_heart = false;
+    if (tile && tile->terrain == uint8_t(TerrainId::DungeonHeart)) in_dungeon_heart = true;
+    bool fearless = (c.ai_flags & kAIFlagFearless) != 0 || state_.elapsed < c.fearless_until;
+    bool always_flee = (c.ai_flags & kAIFlagAlwaysFlee) != 0;
+    auto is_threatening = [](const Creature& o) {
+        return o.state != CreatureState::Dead && o.state != CreatureState::InHand &&
+               o.state != CreatureState::Tortured && o.state != CreatureState::Imprisoned;
+    };
+    float enemy_threat = 0.0f, our_threat = 0.0f;
+    int fellow_fighters = 0;
+    for (const Creature& other : state_.creatures) {
+        if (&other == &c || !is_threatening(other)) continue;
+        float dx = other.x - c.x, dy = other.y - c.y;
+        if (dx * dx + dy * dy > c.sight * c.sight) continue;
+        if (other.team != c.team) {
+            enemy_threat += other.threat;
+        } else {
+            our_threat += other.threat;
+            if (other.fight_style != kFightStyleNonFighter) ++fellow_fighters;
+        }
+    }
+    if (!fearless && !in_dungeon_heart) {
+        float threat_caused = (always_flee || c.hp < c.max_hp * kCriticalHealthPercent / 100.0f)
+                                  ? c.threat : our_threat;
+        if (enemy_threat - threat_caused > c.fear &&
+            (fellow_fighters == 0 || always_flee)) {
+            if (c.job != CreatureJob::Flee) c.return_job_id = c.current_job_id;
+            set_job(c, CreatureJob::Flee, state_.elapsed);
+            c.state = CreatureState::Fleeing;
+            return true;
+        }
+    }
+    if ((c.fight_style != kFightStyleNonFighter || in_dungeon_heart) &&
+        c.attacking_id >= 0 &&
+        (c.job == CreatureJob::Fight ||
+         (c.call_to_arms_on && c.sight <= kCallToArmsFightDistance) ||
+         !c.call_to_arms_on)) {
+        if (c.job != CreatureJob::Fight) set_job(c, CreatureJob::Fight, state_.elapsed);
+        c.state = CreatureState::Fighting;
+        return false;
+    }
+    return false;
+}
+
+void Game::update_battles() {
+    auto by_id = [&](int id) -> Creature* {
+        for (Creature& c : state_.creatures) if (c.id == id) return &c;
+        return nullptr;
+    };
+    auto fighting = [&](const Creature& c) {
+        return c.state == CreatureState::Fighting && c.attacking_id >= 0 &&
+               by_id(c.attacking_id) != nullptr;
+    };
+    for (Creature& c : state_.creatures) {
+        if (c.battle_id < 0) continue;
+        Creature* member = by_id(c.id);
+        if (!member || c.state == CreatureState::Dead || c.state == CreatureState::InHand ||
+            (!fighting(c) && state_.elapsed >= c.battle_leave_time)) {
+            c.battle_id = -1;
+            c.battle_leave_time = -1.0f;
+        }
+    }
+    for (auto it = state_.battles.begin(); it != state_.battles.end();) {
+        it->members.clear();
+        it->owners.clear();
+        for (const Creature& c : state_.creatures)
+            if (c.battle_id == it->id) { it->members.push_back(c.id); it->owners.push_back(c.team); }
+        if (it->members.empty()) { it = state_.battles.erase(it); continue; }
+        float sx = 0.0f, sy = 0.0f;
+        for (int id : it->members) {
+            Creature* m = by_id(id);
+            if (m) { sx += m->x; sy += m->y; }
+        }
+        it->center_x = sx / float(it->members.size());
+        it->center_y = sy / float(it->members.size());
+        ++it;
+    }
+    for (Creature& c : state_.creatures) {
+        if (c.battle_id >= 0 || !fighting(c) || c.state == CreatureState::Dead) continue;
+        Battle* nearest = nullptr;
+        float nearest_d2 = 0.0f;
+        for (Battle& b : state_.battles) {
+            float dx = b.center_x - c.x, dy = b.center_y - c.y;
+            float d2 = dx * dx + dy * dy;
+            if (!nearest || d2 < nearest_d2) { nearest = &b; nearest_d2 = d2; }
+        }
+        if (!nearest || (nearest_d2 > kBattleJoinDistanceSquared &&
+                         int(state_.battles.size()) < kMaxBattles)) {
+            Battle b;
+            b.id = 1;
+            for (const Battle& old : state_.battles) b.id = std::max(b.id, old.id + 1);
+            b.center_x = c.x; b.center_y = c.y;
+            state_.battles.push_back(b);
+            nearest = &state_.battles.back();
+        }
+        c.battle_id = nearest->id;
+        c.battle_leave_time = state_.elapsed + kMinBattleTime;
+        nearest->members.push_back(c.id);
+        nearest->owners.push_back(c.team);
+    }
+    for (Battle& b : state_.battles) {
+        float sx = 0.0f, sy = 0.0f;
+        for (int id : b.members) {
+            Creature* m = by_id(id);
+            if (m) { sx += m->x; sy += m->y; }
+        }
+        if (!b.members.empty()) {
+            b.center_x = sx / float(b.members.size());
+            b.center_y = sy / float(b.members.size());
+        }
+    }
+}
+
 Creature* Game::update_fight(Creature& c, int cx, int cy) {
-    (void)cx; (void)cy;
+    if (should_flee_or_attack(c, cx, cy)) return nullptr;
     const float dt = kTickSeconds;
     Creature* enemy = nullptr;
     float best_d2 = c.sight * c.sight;
     if (c.attacking_id >= 0) {
         for (Creature& other : state_.creatures) {
-            if (other.id != c.attacking_id || other.state == CreatureState::Dead) continue;
+            if (other.id != c.attacking_id || other.state == CreatureState::Dead ||
+                !can_be_hurt_by(c.ai_flags, other.ai_flags)) continue;
             float dx = other.x - c.x, dy = other.y - c.y;
             if (dx * dx + dy * dy <= c.sight * c.sight) {
                 enemy = &other;
@@ -1285,8 +1431,16 @@ Creature* Game::update_fight(Creature& c, int cx, int cy) {
         const bool fighter = (c.ai_flags & kAIFlagFearless) || c.fight_style > 0;
         if (!fighter) ++c.victim_guard_warnings;
         if (c.attacking_id >= 0) ++c.victim_guard_warnings;
+        auto attackers_of = [&](int id) {
+            int n = 0;
+            for (const Creature& o : state_.creatures)
+                if (o.attacking_id == id && o.state != CreatureState::Dead) ++n;
+            return n;
+        };
         for (Creature& other : state_.creatures) {
-            if (other.team == c.team || other.state == CreatureState::Dead) continue;
+            if (other.team == c.team || other.state == CreatureState::Dead ||
+                !can_be_hurt_by(c.ai_flags, other.ai_flags)) continue;
+            if (attackers_of(other.id) >= kMaxMeleeAttackers) continue;
             if (c.state == CreatureState::InHand ||
                 (c.job == CreatureJob::Fight && c.attacking_id >= 0)) continue;
             float dx = other.x - c.x, dy = other.y - c.y;
@@ -1348,38 +1502,13 @@ Creature* Game::update_fight(Creature& c, int cx, int cy) {
         if (c.avoid_counter <= 0.0f) c.avoid_creature = -1;
     }
 
-    const bool outnumbered = (melee_n + range_n) > 1;
-    const bool already_fleeing = c.job == CreatureJob::Flee && c.backoff_timer > 0.0f;
-    const bool overwhelmed = enemy && (already_fleeing || c.backoff_timer <= 0.0f) &&
-        state_.elapsed >= c.fearless_until &&
-        !(c.ai_flags & kAIFlagFearless) &&
-        (c.current_fear > threshold || outnumbered) &&
-        (c.hp < c.max_hp * kRetreatHpFraction || outnumbered);
-    if (overwhelmed) {
-        if (c.job != CreatureJob::Flee) c.return_job_id = c.current_job_id;
-        set_job(c, CreatureJob::Flee, state_.elapsed);
-        float ax = c.x - enemy->x, ay = c.y - enemy->y;
-        float len = std::max(0.0001f, std::sqrt(ax * ax + ay * ay));
-        c.target_x = std::max(0, std::min(state_.world.width - 1,
-                                         int(c.x - ax / len * 4.0f)));
-        c.target_y = std::max(0, std::min(state_.world.height - 1,
-                                         int(c.y - ay / len * 4.0f)));
-        c.path.clear();
-        c.path_index = 0;
-        c.state = CreatureState::Walking;
-        c.backoff_timer = kBackoffSeconds;
-        c.retreating_creature = enemy->id;
-        c.creature_retreating_counter = 1;
-        c.avoid_creature = enemy->id;
-        c.avoid_counter = kBackoffSeconds;
-        ++c.overthreat_counter;
-        apply_anger(c, 1.0f, 1);
-    } else if (enemy && best_d2 <= c.melee_range * c.melee_range) {
+    if (enemy && best_d2 <= c.melee_range * c.melee_range) {
         set_job(c, CreatureJob::Fight, state_.elapsed);
         c.state = CreatureState::Fighting;
         c.attack_type = 1;
         if (c.attack_cooldown <= 0.0f) {
-            enemy->hp -= c.damage * resistance_factor(*enemy, c.attack_type);
+            enemy->hp -= rear_attack_bonus(c.damage, c, *enemy) *
+                         resistance_factor(*enemy, c.attack_type);
             c.attack_cooldown = std::max(0.1f, c.melee_recharge);
             enemy->current_fear = std::max(enemy->current_fear, c.threat * 0.05f);
             grant_xp(c, c.damage * 0.05f);
@@ -1495,7 +1624,8 @@ void Game::update_imp_planner(Creature& c, int cx, int cy) {
 
 void Game::choose_mood_job(Creature& c, int cx, int cy) {
     (void)cx; (void)cy;
-    if (!c.possessed && c.job == CreatureJob::Fight && c.path.empty())
+    if (!c.possessed && c.job == CreatureJob::Fight && c.path.empty() &&
+        c.attacking_id < 0)
         set_job(c, CreatureJob::Idle, state_.elapsed);
     if (c.job == CreatureJob::Fight || c.job == CreatureJob::Flee) return;
 
@@ -1792,6 +1922,7 @@ void Game::update_creature(Creature& c) {
             c.x = tx; c.y = ty;
             ++c.path_index;
         } else {
+            c.facing = std::atan2(dx, dy);
             c.x += dx / dist * move;
             c.y += dy / dist * move;
         }
@@ -2075,6 +2206,7 @@ void Game::step() {
         spell_cooldown_left_ = std::max(0.0f, spell_cooldown_left_ - kTickSeconds);
     spawn_initial_enemies();
     update_traps();
+    update_battles();
     evaluate_triggers();
     update_magic();
     for (Creature& c : state_.creatures) update_creature(c);
