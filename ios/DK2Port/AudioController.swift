@@ -42,7 +42,6 @@ final class DK2AudioController {
         engine.connect(environment, to: sfxBus, format: environment.outputFormat(forBus: 0))
         engine.connect(masterBus, to: engine.mainMixerNode, format: nil)
 
-        environment.distanceAttenuationParameters.distanceFilter = 2
         environment.distanceAttenuationParameters.rolloffFactor = 1
         applyVolumes()
 
