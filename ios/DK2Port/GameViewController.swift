@@ -120,7 +120,7 @@ final class DK2GameViewController: UIViewController {
         lastListenerX = cx
         lastListenerY = cy
         audio.updateListener(x: cx, y: cy, vx: vx, vy: vy)
-        emitStateAudioEvents(snapshot)
+        emitStateAudioEvents(snapshot as NSDictionary)
         DK2SaveManager.shared.updateAutosave(snapshot: snapshot as NSDictionary,
                                              bridge: bridge)
         onState?(snapshot as NSDictionary)
