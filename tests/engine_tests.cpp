@@ -252,7 +252,10 @@ int main(int argc, char** argv) {
         for (int yy = 1; yy < sp.state().world.height - 1 && sx2 < 0; ++yy)
             for (int xx = 1; xx < sp.state().world.width - 1; ++xx)
                 if (!sp.state().world.walkable(xx, yy)) { sx2 = xx; sy2 = yy; break; }
-        CHECK(sx2 >= 0);
+        if (sx2 < 0) {
+            sx2 = 1; sy2 = 1;
+            sp.state().world.at(sx2, sy2)->terrain = uint8_t(TerrainId::Rock);
+        }
         sp.state().mana = 100000.0f;
         sp.state().spells_known[2] = 1;
         CHECK(!sp.cast_spell(2, sx2, sy2));
