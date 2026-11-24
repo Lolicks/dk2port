@@ -121,6 +121,8 @@ static std::string stdString(NSString *s) { return s.UTF8String ?: ""; }
         @"victory": @(s.victory),
         @"defeat": @(s.defeat),
         @"selected": @(_game->selected_creature),
+        @"selectedX": @(s.selected_tile_x),
+        @"selectedY": @(s.selected_tile_y),
     };
 }
 

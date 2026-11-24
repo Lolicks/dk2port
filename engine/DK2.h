@@ -338,6 +338,8 @@ struct GameState {
     std::array<float, 256> timers{};
     float time_limit = 0.0f;
     int objective_id = 0;
+    int selected_tile_x = -1;
+    int selected_tile_y = -1;
     CameraState camera;
     GameConfig config;
     float elapsed = 0;

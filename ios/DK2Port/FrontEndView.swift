@@ -80,7 +80,9 @@ struct DK2FrontEndView: View {
                     }
                     DK2OriginalButton(title: "Campaign") { page = .campaign }
                     DK2OriginalButton(title: "Skirmish") { page = .skirmish }
-                    DK2OriginalButton(title: "Intro") { playingCutscene = "BullfrogIntro" }
+                    DK2OriginalButton(title: "Intro") { DK2Cutscene.request(.intro) }
+                    DK2OriginalButton(title: "Outro") { DK2Cutscene.request(.outro) }
+                    DK2OriginalButton(title: "Trailer") { DK2Cutscene.request(.trailer) }
                     DK2OriginalButton(title: "Save / Load") { showSaves = true }
                     DK2OriginalButton(title: "Options") { page = .options }
                 }
@@ -106,13 +108,12 @@ struct DK2FrontEndView: View {
                     }
                 }
             case .options:
-                VStack(spacing: 18) {
-                    HStack { Button("‹ Back") { page = .main }.foregroundColor(.white); Spacer() }.padding()
-                    Text("Options").font(.title).foregroundColor(.white)
-                    Text("Original DK2 frontend artwork is used for all buttons and backgrounds.")
-                        .foregroundColor(.gray).multilineTextAlignment(.center)
-                    Spacer()
-                }
+                DK2OptionsView { page = .main }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: DK2Cutscene.playRequest)) { note in
+            if let name = note.userInfo?[DK2Cutscene.Key.name] as? String {
+                playingCutscene = name
             }
         }
     }

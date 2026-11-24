@@ -2257,6 +2257,8 @@ void Game::on_rotate(float delta) {
 
 void Game::select_at(float wx, float wy) {
     selected_creature = -1;
+    state_.selected_tile_x = int(wx);
+    state_.selected_tile_y = int(wy);
     float best = 1.5f * 1.5f;
     for (const Creature& c : state_.creatures) {
         float dx = c.x - wx, dy = c.y - wy;

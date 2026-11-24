@@ -1,46 +1,56 @@
 import SwiftUI
 
-/// Plays a pre-decoded original TQI cutscene from the app bundle.
-/// Frames are produced by our C decoder + OpenKeeper reference pipeline.
+/// Displays a pre-decoded original TGQ cutscene. Frame pacing and the end of
+/// playback are driven by DK2CutscenePlayer (audio clock, 25 fps, drop-frame).
 struct DK2CutsceneView: View {
     let name: String
     let onDone: () -> Void
 
-    @State private var frame = 0
-    @State private var images: [UIImage] = []
+    @StateObject private var player: DK2CutscenePlayer
 
-    private let timer = Timer.publish(every: 1.0 / 24.0, on: .main, in: .common).autoconnect()
+    init(name: String, onDone: @escaping () -> Void) {
+        self.name = name
+        self.onDone = onDone
+        _player = StateObject(wrappedValue: DK2CutscenePlayer(name: name))
+    }
 
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            if let img = images.indices.contains(frame) ? images[frame] : nil {
-                Image(uiImage: img)
+
+            if let image = player.currentImage {
+                Image(uiImage: image)
                     .resizable()
                     .scaledToFit()
                     .ignoresSafeArea()
-            }
-            VStack {
-                Spacer()
-                Button("Skip") { onDone() }
-                    .foregroundColor(.white)
+            } else if !player.hasAudio {
+                Text("Cutscene \(name) has no decoded frames in this bundle")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                    .multilineTextAlignment(.center)
                     .padding()
             }
-        }
-        .onAppear {
-            let dir = DK2AssetLoader.root
-                .appendingPathComponent("movies")
-                .appendingPathComponent(name)
-            let files = (try? FileManager.default.contentsOfDirectory(atPath: dir.path))?
-                .filter { $0.hasSuffix(".png") }.sorted() ?? []
-            images = files.compactMap {
-                UIImage(contentsOfFile: dir.appendingPathComponent($0).path)
+
+            VStack {
+                Spacer()
+                HStack {
+                    if player.droppedFrames > 0 {
+                        Text("\(player.droppedFrames) dropped")
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                            .padding(.leading)
+                    }
+                    Spacer()
+                    Button("Skip") {
+                        player.stop()
+                        onDone()
+                    }
+                    .foregroundColor(.white)
+                    .padding()
+                }
             }
         }
-        .onReceive(timer) { _ in
-            guard !images.isEmpty else { return }
-            frame += 1
-            if frame >= images.count { onDone() }
-        }
+        .onAppear { player.start { onDone() } }
+        .onDisappear { player.stop() }
     }
 }

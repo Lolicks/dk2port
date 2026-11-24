@@ -215,8 +215,9 @@ fragment float4 fog_fragment(FogOut in [[stage_in]]) {
 }
 
 // ---------------------------------------------------------------------------
-// Original KMF geometry. The unmodified mesh_vertex/mesh_fragment pair is kept
-// for compatibility with DK2MeshRenderer; lit_* adds depth-aware lighting.
+// Original KMF geometry. Both the plain and lit mesh pipelines consume the
+// normal stored in the 18-byte VERT/MeshVertEx record (32-bit floats) that is
+// carried through DKAF v2 / OBJ `vn` lines by DK2MeshVertex.
 // ---------------------------------------------------------------------------
 
 /* Layout is identical to DK2MeshUniforms on the Swift side (80 bytes). */
@@ -231,11 +232,13 @@ struct MeshUniforms {
 struct MeshVertexIn {
     float4 position [[attribute(0)]];
     float2 uv       [[attribute(1)]];
+    float3 normal   [[attribute(2)]];
 };
 
 struct MeshOut {
     float4 position [[position]];
     float2 uv;
+    float3 normal;
 };
 
 /* The exported KMF vertices use XY as the ground plane and Z as height
@@ -244,16 +247,18 @@ struct MeshOut {
 vertex MeshOut mesh_vertex(
     MeshVertexIn in [[stage_in]],
     constant MeshUniforms &mu [[buffer(2)]],
-    constant float4 &placement [[buffer(1)]]) {
+    constant float4 &placement [[buffer(1)]],
+    constant float4 &origin [[buffer(4)]]) {
     float3 local = in.position.xyz * placement.z;
     float3 world = float3(placement.x + local.x,
                           placement.y + local.y,
-                          -local.z);
+                          origin.x - local.z);
     MeshOut out;
     out.position = mu.viewProjection * float4(world, 1.0f);
     uint cell = (uint)placement.w;
     float2 cellXY = float2(float(cell % 8u), float(cell / 8u));
     out.uv = (cellXY + fract(in.uv)) / 8.0f;
+    out.normal = in.normal;
     return out;
 }
 
@@ -267,6 +272,7 @@ fragment float4 mesh_fragment(
 struct LitMeshOut {
     float4 position [[position]];
     float2 uv;
+    float3 normal;
     float3 worldPos;
     float3 viewDir;
     float fog;
@@ -278,17 +284,21 @@ vertex LitMeshOut lit_mesh_vertex(
     constant Uniforms &u [[buffer(0)]],
     constant float4 &placement [[buffer(1)]],
     constant MeshUniforms &mu [[buffer(2)]],
-    constant EffectsUniforms &fx [[buffer(3)]]) {
+    constant EffectsUniforms &fx [[buffer(3)]],
+    constant float4 &origin [[buffer(4)]]) {
     float3 local = in.position.xyz * placement.z;
     float3 world = float3(placement.x + local.x,
                           placement.y + local.y,
-                          -local.z);
+                          origin.x - local.z);
 
     LitMeshOut out;
     out.position = mu.viewProjection * float4(world, 1.0f);
     uint cell = (uint)placement.w;
     float2 cellXY = float2(float(cell % 8u), float(cell / 8u));
     out.uv = (cellXY + fract(in.uv)) / 8.0f;
+    // world = (local.x, local.y, -local.z); the inverse-transpose reflection
+    // negates the normal's Z component.
+    out.normal = float3(in.normal.x, in.normal.y, -in.normal.z);
     out.worldPos = world;
     out.viewDir = normalize(float3(u.center - world.xy, 12.0f - world.z));
     float horizontal = length(world.xy - u.center);
@@ -303,8 +313,14 @@ fragment float4 lit_mesh_fragment(
     texture2d<float> atlas [[texture(0)]],
     sampler samp [[sampler(0)]]) {
     float4 texel = atlas.sample(samp, in.uv);
-    float3 n = normalize(cross(dfdy(in.worldPos), dfdx(in.worldPos)));
-    if (n.z < 0.0f) n = -n;
+    // Use the original VERT normal; fall back to a derivative only for
+    // meshes exported without normals (legacy DKAF v1 buffers).
+    float3 n = in.normal;
+    if (dot(n, n) < 0.25f) {
+        n = cross(dfdy(in.worldPos), dfdx(in.worldPos));
+        if (n.z < 0.0f) n = -n;
+    }
+    n = normalize(n);
 
     float3 L = normalize(fx.lightDirection.xyz);
     float diffuse = max(dot(n, L), 0.0f);

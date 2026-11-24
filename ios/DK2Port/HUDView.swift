@@ -17,6 +17,7 @@ struct DK2GameHUD: View {
     @State private var showSaveLoad = false
     @State private var slot = "slot1"
     @State private var saveMessage = ""
+    @State private var cutsceneName: String?
 
     private func number(_ key: String) -> Int {
         if let v = state[key] as? Int { return v }
@@ -58,9 +59,20 @@ struct DK2GameHUD: View {
                 saveLoadOverlay
             }
         }
+        .overlay {
+            if let name = cutsceneName {
+                DK2CutsceneView(name: name) { cutsceneName = nil }
+                    .allowsHitTesting(true)
+            }
+        }
         .allowsHitTesting(false)
         .onAppear {
             DK2GameCommand.postPause(false)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: DK2Cutscene.playRequest)) { note in
+            if let name = note.userInfo?[DK2Cutscene.Key.name] as? String {
+                cutsceneName = name
+            }
         }
     }
 

@@ -12,6 +12,18 @@ final class DK2GameViewController: UIViewController {
     private let tick: TimeInterval = 1.0 / 30.0
     let mission: DK2MapEntry
 
+    private var selectedX: Int32 = 0
+    private var selectedY: Int32 = 0
+    private var eventAudio: DK2EventAudioResponder?
+    private var lastListenerX: Float = 0
+    private var lastListenerY: Float = 0
+    private var lastCreatureCount = 0
+    private var lastGold = 0
+    private var lastVictory = false
+    private var lastDefeat = false
+    private var lastCreatureHP: [String: Float] = [:]
+    private var lastHitSound: TimeInterval = 0
+
     var onState: ((NSDictionary) -> Void)?
 
     init(mission: DK2MapEntry) {
@@ -50,6 +62,11 @@ final class DK2GameViewController: UIViewController {
 
         installCommandObservers()
 
+        let responder = DK2EventAudioResponder(audio: audio)
+        responder.configure()
+        responder.install()
+        eventAudio = responder
+
         displayLink = CADisplayLink(target: self, selector: #selector(frame(_:)))
         displayLink?.add(to: .main, forMode: .common)
     }
@@ -75,8 +92,15 @@ final class DK2GameViewController: UIViewController {
         if w > 0 && h > 0 {
             let cx = min(w - 1, max(0, w / 2))
             let cy = min(h - 1, max(0, h / 2))
-            _ = bridge.spawnCreature(0, x: Int32(cx), y: Int32(cy))
+            selectedX = Int32(cx)
+            selectedY = Int32(cy)
+            _ = bridge.spawnCreature(0, x: selectedX, y: selectedY)
         }
+        lastCreatureCount = DK2GameViewController.integer(world["creatures"])
+        lastGold = DK2GameViewController.integer(world["gold"])
+        lastVictory = DK2GameViewController.boolean(world["victory"])
+        lastDefeat = DK2GameViewController.boolean(world["defeat"])
+        lastCreatureHP.removeAll()
     }
 
     @objc private func frame(_ link: CADisplayLink) {
@@ -88,11 +112,87 @@ final class DK2GameViewController: UIViewController {
             steps += 1
         }
         let snapshot = bridge.snapshot
-        audio.updateListener(x: snapshot["centerX"] as? Float ?? 0,
-                             y: snapshot["centerY"] as? Float ?? 0)
+        let cx = DK2GameViewController.number(snapshot["centerX"])
+        let cy = DK2GameViewController.number(snapshot["centerY"])
+        let dt = Swift.max(0.001, link.duration * TimeInterval(link.frameInterval))
+        let vx = (cx - lastListenerX) / Float(dt)
+        let vy = (cy - lastListenerY) / Float(dt)
+        lastListenerX = cx
+        lastListenerY = cy
+        audio.updateListener(x: cx, y: cy, vx: vx, vy: vy)
+        emitStateAudioEvents(snapshot)
         DK2SaveManager.shared.updateAutosave(snapshot: snapshot as NSDictionary,
                                              bridge: bridge)
         onState?(snapshot as NSDictionary)
+    }
+
+    /// Emits NotificationCenter game events consumed by DK2EventAudioResponder.
+    private func emitStateAudioEvents(_ snapshot: NSDictionary) {
+        let cx = DK2GameViewController.number(snapshot["centerX"])
+        let cy = DK2GameViewController.number(snapshot["centerY"])
+
+        let creatures = DK2GameViewController.integer(snapshot["creatures"])
+        if creatures < lastCreatureCount {
+            DK2EventAudio.post(.death, x: cx, y: cy)
+        }
+        lastCreatureCount = creatures
+
+        let gold = DK2GameViewController.integer(snapshot["gold"])
+        if gold > lastGold {
+            DK2EventAudio.post(.pickup, x: Float(selectedX), y: Float(selectedY))
+        }
+        lastGold = gold
+
+        let now = Date().timeIntervalSinceReferenceDate
+        var hit: (x: Float, y: Float)?
+        for (index, creature) in bridge.creatureInstances.enumerated() {
+            let hp = DK2GameViewController.number(creature["hp"])
+            let species = DK2GameViewController.integer(creature["species"])
+            let key = "\(index):\(species)"
+            if let previous = lastCreatureHP[key], hp < previous - 0.04 {
+                hit = (DK2GameViewController.number(creature["x"]),
+                       DK2GameViewController.number(creature["y"]))
+            }
+            lastCreatureHP[key] = hp
+        }
+        if let hit = hit, now - lastHitSound > 0.25 {
+            lastHitSound = now
+            DK2EventAudio.post(.hit, x: hit.x, y: hit.y)
+        }
+
+        let victory = DK2GameViewController.boolean(snapshot["victory"])
+        if victory && !lastVictory {
+            DK2EventAudio.post(.victory, x: cx, y: cy)
+            DK2Cutscene.request(.outro)
+        }
+        let defeat = DK2GameViewController.boolean(snapshot["defeat"])
+        if defeat && !lastDefeat {
+            DK2EventAudio.post(.defeat, x: cx, y: cy)
+        }
+        lastVictory = victory
+        lastDefeat = defeat
+    }
+
+    private static func number(_ value: Any?) -> Float {
+        if let v = value as? Float { return v }
+        if let v = value as? Double { return Float(v) }
+        if let v = value as? Int { return Float(v) }
+        if let v = value as? NSNumber { return v.floatValue }
+        return 0
+    }
+
+    private static func integer(_ value: Any?) -> Int {
+        if let v = value as? Int { return v }
+        if let v = value as? NSNumber { return v.intValue }
+        if let v = value as? Float { return Int(v) }
+        if let v = value as? Double { return Int(v) }
+        return 0
+    }
+
+    private static func boolean(_ value: Any?) -> Bool {
+        if let v = value as? Bool { return v }
+        if let v = value as? NSNumber { return v.boolValue }
+        return false
     }
 
     private func installGestures(on target: UIView) {
@@ -139,6 +239,10 @@ final class DK2GameViewController: UIViewController {
         let wx = cx + Float(point.x - view.bounds.midX) / (zoom * 28)
         let wy = cy + Float(point.y - view.bounds.midY) / (zoom * 28)
         bridge.selectWorldX(wx, y: wy)
+        let maxX = Int32(max(0, DK2GameViewController.integer(snap["width"]) - 1))
+        let maxY = Int32(max(0, DK2GameViewController.integer(snap["height"]) - 1))
+        selectedX = min(maxX, max(0, Int32(floor(wx))))
+        selectedY = min(maxY, max(0, Int32(floor(wy))))
     }
 
     private func installCommandObservers() {
@@ -155,26 +259,28 @@ final class DK2GameViewController: UIViewController {
         case DK2GameCommand.build:
             let category = info[DK2GameCommand.Key.category] as? String ?? "room"
             let index = info[DK2GameCommand.Key.index] as? Int ?? 0
-            let cx = Int32(bridge.snapshot["centerX"] as? Float ?? 0)
-            let cy = Int32(bridge.snapshot["centerY"] as? Float ?? 0)
+            let placed: Bool
             switch category {
             case "trap":
-                _ = bridge.placeTrap(Int32(index), x: cx, y: cy, owner: 0)
+                placed = bridge.placeTrap(Int32(index), x: selectedX, y: selectedY, owner: 0)
             case "door":
-                _ = bridge.placeDoor(Int32(index), x: cx, y: cy, owner: 0)
+                placed = bridge.placeDoor(Int32(index), x: selectedX, y: selectedY, owner: 0)
             default:
-                _ = bridge.buildRoom(Int32(index), x: cx, y: cy, owner: 0)
+                placed = bridge.buildRoom(Int32(index), x: selectedX, y: selectedY, owner: 0)
+            }
+            if placed {
+                DK2EventAudio.post(.build, x: Float(selectedX), y: Float(selectedY))
             }
         case DK2GameCommand.spell:
             let index = info[DK2GameCommand.Key.index] as? Int ?? 0
-            let cx = bridge.snapshot["centerX"] as? Float ?? 0
-            let cy = bridge.snapshot["centerY"] as? Float ?? 0
-            _ = bridge.castSpell(Int32(index), x: Int32(cx), y: Int32(cy))
+            if bridge.castSpell(Int32(index), x: selectedX, y: selectedY) {
+                DK2EventAudio.post(.spell, x: Float(selectedX), y: Float(selectedY))
+            }
         case DK2GameCommand.creature:
             let index = info[DK2GameCommand.Key.index] as? Int ?? 0
-            let cx = bridge.snapshot["centerX"] as? Float ?? 0
-            let cy = bridge.snapshot["centerY"] as? Float ?? 0
-            _ = bridge.spawnCreature(Int32(index), x: Int32(cx), y: Int32(cy))
+            if bridge.spawnCreature(Int32(index), x: selectedX, y: selectedY) >= 0 {
+                DK2EventAudio.post(.spawn, x: Float(selectedX), y: Float(selectedY))
+            }
         case DK2GameCommand.save:
             if let slot = info[DK2GameCommand.Key.slot] as? String {
                 _ = DK2SaveManager.shared.save(slot: slot, bridge: bridge)

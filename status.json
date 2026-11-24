@@ -2,7 +2,7 @@
   "project": "Dungeon Keeper II — native iOS port",
   "repository": "https://github.com/Lolicks/dk2port",
   "updated": "2026-11-24",
-  "verdict": "Full port in progress: triggers+AI exact RE implemented; graphics/audio/UI next. IPA preview repaired.",
+  "verdict": "Full port in progress: Phase 1 (triggers/AI) and mesh/ANIM fidelity done; AV/UI and FX remaining.",
   "build": {
     "last_successful_run": "https://github.com/Lolicks/dk2port/actions/runs/45244837079",
     "ipa_size_bytes": 492544759,
@@ -74,13 +74,13 @@
     },
     {
       "name": "3D mesh rendering in iOS runtime",
-      "state": "partial",
-      "evidence": "DK2MeshRenderer/Shaders + DKAF frame buffers; models staged in final build"
+      "state": "done",
+      "evidence": "LOD0-only OBJ 862/862, usemtl+material manifest, normals/UV, single projection"
     },
     {
       "name": "ANIM skeletal animation in iOS runtime",
-      "state": "partial",
-      "evidence": "DKAF frame buffers + DK2MeshStore; morph weights still simplified"
+      "state": "done",
+      "evidence": "DKAF v2 morph poses+weights, 30fps, VERT UV/normal, 255-frame clips (Mis-Idle1)"
     },
     {
       "name": "Cutscene/video playback in iOS UI",
@@ -110,7 +110,7 @@
     {
       "name": "Lighting, shadows, particles, water visual fidelity",
       "state": "partial",
-      "evidence": "EffectsPipeline.swift + Shaders.metal: depth, bump water/lava, lighting, fog-of-war; shadows approximate"
+      "evidence": "mesh normals + bump/scroll water, fog-of-war, settings hook; shadow map/emitters still approximate"
     },
     {
       "name": "Optimization / streaming for iPhone 12 mini",

@@ -25,9 +25,11 @@
 //    The current ObjC bridge does not forward that byte, so when it is absent
 //    a camera-centred visibility bubble plus owned tiles is used as a fallback.
 //    Exposing `t->flags` in `tileInstances` would make this exact.
-//  - Creature geometry: DK2MeshRenderer is intentionally left untouched. The
-//    lit mesh renderer below reuses DK2MeshStore but builds its own depth-
-//    compatible, lit pipelines so it can share the depth-attached pass.
+//  - Creature geometry: this file is the single projection / mesh pipeline.
+//    It reuses DK2MeshStore; the earlier DK2MeshRenderer duplicate was removed.
+//    Morph poses, per-species placement and normals come from the DKAF v2 or
+//    OBJ export; animation runs at the game tick rate of 30 fps and freezes on
+//    dk2.command.pause.
 //
 
 import Foundation
@@ -36,6 +38,15 @@ import MetalKit
 import simd
 
 // MARK: - Shader-facing data layouts
+
+/// 80 bytes. Must match `MeshUniforms` in Shaders.metal field for field.
+struct DK2MeshUniforms {
+    var viewProjection: simd_float4x4 = matrix_identity_float4x4
+    var time: Float = 0
+    var pad0: Float = 0
+    var pad1: Float = 0
+    var pad2: Float = 0
+}
 
 /// 80 bytes. Must match `EffectsUniforms` in Shaders.metal field for field.
 struct DK2EffectsUniforms {
@@ -144,6 +155,9 @@ private enum DK2BlendMode {
 /// the fog-of-war overlay. Public entry points are the four `draw...` methods.
 final class DK2EffectsRenderer {
     var effects = DK2EffectsUniforms.default
+    /// View-only camera tilt; per-species Z scale/offset come from ANIM/HEAD
+    /// via DK2MeshPlacement and are applied per mesh below.
+    private static let cameraTilt: Float = 0.32
 
     private let device: MTLDevice
     private let atlas: MTLTexture
@@ -160,6 +174,7 @@ final class DK2EffectsRenderer {
     private let alwaysState: MTLDepthStencilState?
 
     private let meshStore: DK2MeshStore
+    private var settingsToken: NSObjectProtocol?
 
     private static let fallbackCreatureNames: [String] = [
         "Imp", "Goblin", "Skeleton", "Troll", "Bile Demon", "Black Knight",
@@ -213,10 +228,21 @@ final class DK2EffectsRenderer {
 
         let names = DK2AssetLoader.gameData?.creatureNames ?? Self.fallbackCreatureNames
         self.meshStore = DK2MeshStore(device: device, assetRoot: assetRoot,
+
+        settingsToken = NotificationCenter.default.addObserver(
+            forName: DK2Settings.renderingDidChange, object: nil, queue: .main)
+            { [weak self] _ in self?.applyRenderSettings() }
+        applyRenderSettings()
                                       creatureNames: names)
     }
 
     // MARK: Pipeline construction
+
+    private func applyRenderSettings() {
+        effects.fog.w = 0.016 / max(0.2, DK2Settings.viewDistance)
+        effects.shading.y = DK2Settings.shadows ? 0.45 : 0.0
+        effects.lightColor.w = 0.55 * DK2Settings.gamma
+    }
 
     private static func makePipeline(
         device: MTLDevice,
@@ -274,6 +300,9 @@ final class DK2EffectsRenderer {
         descriptor.attributes[1].format = .float2
         descriptor.attributes[1].offset = 16
         descriptor.attributes[1].bufferIndex = 0
+        descriptor.attributes[2].format = .float3
+        descriptor.attributes[2].offset = 24
+        descriptor.attributes[2].bufferIndex = 0
         return descriptor
     }
 
@@ -313,8 +342,12 @@ final class DK2EffectsRenderer {
             let x: Float
             let y: Float
             let cell: Float
+            let scale: Float
+            let offset: SIMD3<Float>
         }
 
+        let clock = DK2AnimationClock.shared
+        let animationTime = clock.time(uniforms.time)
         var placements: [Placement] = []
         placements.reserveCapacity(creatures.count)
         for creature in creatures {
@@ -335,12 +368,15 @@ final class DK2EffectsRenderer {
             else { continue }
 
             let phase = Float(index) * 0.37
-            let frame = Int(max(0, uniforms.time * 8.0 + phase)) % mesh.frameCount
+            let fps = mesh.placement.fps
+            let frame = Int(max(0, animationTime * fps + phase)) % mesh.frameCount
             let cell = (indexValue as? UInt32).map { Float($0) }
-                ?? (indexValue as? NSNumber).map { Float($0.floatValue) }
-                ?? Float(32 + (species % 16))
+                 ?? (indexValue as? NSNumber).map { Float($0.floatValue) }
+                 ?? Float(32 + (species % 16))
             placements.append(Placement(mesh: mesh, frame: frame,
-                                        x: x + 0.5, y: y + 0.5, cell: cell))
+                                        x: x + 0.5, y: y + 0.5, cell: cell,
+                                        scale: mesh.placement.scale,
+                                        offset: mesh.placement.offset))
         }
         guard !placements.isEmpty else { return }
         placements.sort { $0.y < $1.y }
@@ -348,8 +384,9 @@ final class DK2EffectsRenderer {
         var localUniforms = uniforms
         var localEffects = effects
         var meshUniforms = DK2MeshUniforms(
-            viewProjection: Self.viewProjection(for: uniforms, tilt: 0.32),
-            time: uniforms.time)
+            viewProjection: Self.viewProjection(for: uniforms,
+                                                tilt: Self.cameraTilt),
+            time: animationTime)
 
         encoder.setRenderPipelineState(meshPipeline)
         if let state = depthWriteState { encoder.setDepthStencilState(state) }
@@ -365,9 +402,14 @@ final class DK2EffectsRenderer {
         encoder.setFragmentSamplerState(sampler, index: 0)
 
         for placement in placements {
-            var transform = SIMD4<Float>(placement.x, placement.y, 2.4, placement.cell)
+            var transform = SIMD4<Float>(placement.x + placement.offset.x,
+                                         placement.y + placement.offset.y,
+                                         placement.scale, placement.cell)
+            var originZ = SIMD4<Float>(placement.offset.z, 0, 0, 0)
             encoder.setVertexBytes(&transform, length: MemoryLayout<SIMD4<Float>>.stride,
                                    index: 1)
+            encoder.setVertexBytes(&originZ, length: MemoryLayout<SIMD4<Float>>.stride,
+                                   index: 4)
             encoder.setVertexBuffer(placement.mesh.vertexBuffer(frame: placement.frame),
                                     offset: 0, index: 0)
             encoder.drawIndexedPrimitives(
@@ -451,7 +493,7 @@ final class DK2EffectsRenderer {
     // MARK: Camera
 
     /// Same ground-plane scale as the 2D tile shader, plus a small tilt so
-    /// creature height is visible. Mirrors DK2MeshRenderer's projection.
+    /// creature height is visible. The only viewProjection implementation.
     private static func viewProjection(for uniforms: DK2Uniforms,
                                        tilt: Float) -> simd_float4x4 {
         let aspect = max(uniforms.aspect, 0.001)
