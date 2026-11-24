@@ -1,7 +1,7 @@
 # DK2Port — STATUS (auto-generated)
 
 **Updated:** 2026-11-24  
-**Verdict:** Core hardening step 8/10: trigger actions for AP, text, camera paths and terrain are executed.
+**Verdict:** Core hardening step 9/10: grid field initialized from terrain, construction blockers and wrap indexing fixed.
 
 ## Build & distribution
 
@@ -33,7 +33,7 @@
 | Full game-state serialization | DONE | DK2S v4: flags/timers/objective/time-limit + full creature/economy state |
 | Original grid simulation in game loop | DONE | FUN_00448d80 arithmetic, 49 ms gate in Game::step() |
 | Custom save system (v5 container, slots, autosave) | DONE | engine/SaveFile.*, DK2SaveManager.swift, SaveSlotsView.swift; CRC/legacy tests OK |
-| C++ core: fixed-step loop, A*, economy, combat, magic | PARTIAL | engine/DK2.cpp; data-driven economy, multi-tile rooms, traps/doors, OpenKeeper AI/battle, worker tasks, spell validation, trigger actions (AP/text/camera/terrain), save v5 |
+| C++ core: fixed-step loop, A*, economy, combat, magic | PARTIAL | engine/DK2.cpp; data-driven economy, rooms, traps/doors, OpenKeeper AI/battle/worker/spells/triggers, grid field + construction blocking, save v5 |
 | Metal tile renderer + touch camera controls | PARTIAL | MetalRenderer.swift; atlas path and time uniform fixed; compile-only check pending |
 | Cutscene/video playback in iOS UI | PARTIAL | CutsceneView.swift + Intro menu button; PNG frames produced in final build from TQI |
 | In-game audio (SDT -> AAC/PCM, positional mixer) | PARTIAL | tools/build_audio.py ready (self-test OK); AAC artifacts produced in final build only |

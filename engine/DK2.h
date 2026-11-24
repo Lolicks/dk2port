@@ -426,6 +426,9 @@ public:
     void update_worker_tasks();
     void execute_trigger_action(const dk2trigger::ActionRequest& req);
     void update_camera_path();
+    void sync_grid_tile(int x, int y);
+    int16_t grid_field(int x, int y) const;
+    bool construction_blocked(int x, int y) const;
     bool damage_room(int x, int y, float amount);
     bool repair_room(int x, int y, float amount);
     void update_traps();

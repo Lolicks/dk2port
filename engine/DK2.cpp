@@ -333,6 +333,13 @@ constexpr int kCreatureFlagCanBeSlapped   = 0x00000004;
 constexpr int kFightStyleNonFighter = 0;
 constexpr float kCriticalHealthPercent = 20.0f;
 constexpr float kCallToArmsFightDistance = 5.0f;
+constexpr float kDigRockHealth = 5000.0f;
+constexpr float kMineGoldHealth = 300.0f;
+constexpr float kDigOwnWallHealth = 130.0f;
+constexpr float kDigEnemyWallHealth = 8.0f;
+constexpr float kAttackTileHealth = 140.0f;
+constexpr float kGoldMinedFromGems = 25.0f;
+constexpr int kDwarfDiggingMultiplier = 4;
 constexpr int kMaxMeleeAttackers = 8;
 constexpr int kMaxRangedAttackers = 8;
 constexpr int kMaxBattles = 8;
@@ -792,6 +799,9 @@ bool Game::load_map(const uint8_t* data, size_t size, std::string* error) {
     ai_rng_ = 0x51ed270bU;
     trigger_runtime_.reset();
     grid_.reset(new GridSimulation(state_.world.width, state_.world.height));
+    for (int gy = 0; gy < state_.world.height; ++gy)
+        for (int gx = 0; gx < state_.world.width; ++gx)
+            sync_grid_tile(gx, gy);
     grid_accumulator_ = 0;
     state_.economy.gold = 0;
     state_.economy.recalculate(state_.world);
@@ -922,7 +932,8 @@ bool Game::build_room(int type, int x, int y, int owner) {
     }
     for (int dy = 0; dy < h; ++dy)
         for (int dx = 0; dx < w; ++dx)
-            if (!state_.world.at(x + dx, y + dy)) return false;
+            if (!state_.world.at(x + dx, y + dy) ||
+                construction_blocked(x + dx, y + dy)) return false;
     for (const Room& r : state_.rooms)
         if (r.x >= x && r.x < x + w && r.y >= y && r.y < y + h) return false;
     int price = def ? structures::room_gold_cost(def) : -1;
@@ -942,6 +953,8 @@ bool Game::build_room(int type, int x, int y, int owner) {
             state_.rooms.push_back(room);
         }
     }
+    for (int dy = 0; dy < h; ++dy)
+        for (int dx = 0; dx < w; ++dx) sync_grid_tile(x + dx, y + dy);
     state_.economy.recalculate(state_.world);
     return true;
 }
@@ -954,6 +967,7 @@ bool Game::damage_room(int x, int y, float amount) {
         Tile* tile = state_.world.at(x, y);
         if (tile) tile->terrain = static_cast<uint8_t>(TerrainId::DirtPath);
         state_.rooms.erase(it);
+        sync_grid_tile(x, y);
         state_.economy.recalculate(state_.world);
         return true;
     }
@@ -1007,6 +1021,7 @@ bool Game::place_door(int index, int x, int y, int owner) {
     door.secret = structures::door_is_secret(def);
     door.hero = structures::door_is_hero(def);
     state_.doors.push_back(door);
+    sync_grid_tile(x, y);
     return true;
 }
 
@@ -1181,6 +1196,7 @@ bool Game::damage_door(int x, int y, float amount) {
         it->integrity -= amount;
         if (it->integrity > 0.0f) return true;
         state_.doors.erase(it);
+        sync_grid_tile(x, y);
         return true;
     }
     return false;
@@ -1515,6 +1531,7 @@ void Game::update_worker_tasks() {
                 target->terrain = uint8_t(TerrainId::DirtPath);
                 target->owner = uint8_t(c.team);
                 target->flags &= uint8_t(~0x01);
+                sync_grid_tile(tx, ty);
                 state_.economy.recalculate(state_.world);
                 task->assigned = -1;
             }
@@ -1524,6 +1541,7 @@ void Game::update_worker_tasks() {
                 target->owner = uint8_t(c.team);
                 if (static_cast<TerrainId>(target->terrain) == TerrainId::DirtPath)
                     target->terrain = uint8_t(TerrainId::ClaimedPath);
+                sync_grid_tile(tx, ty);
                 task->assigned = -1;
             }
         } else if (task->type == WorkerTaskType::RepairWall) {
@@ -2145,6 +2163,12 @@ void Game::update_creature(Creature& c) {
         float dx = tx - c.x, dy = ty - c.y;
         float dist = std::sqrt(dx * dx + dy * dy);
         float move = c.speed * dt;
+        int16_t field = grid_field(int(c.x), int(c.y));
+        if (field > 0) move *= 0.5f;
+        if (field >= 4096) {
+            c.hp -= 20.0f * dt;
+            if (c.hp <= 0.0f) { c.hp = 0.0f; c.state = CreatureState::Dead; }
+        }
         if (dist <= move || dist < 0.0001f) {
             c.x = tx; c.y = ty;
             ++c.path_index;
@@ -2350,6 +2374,39 @@ void Game::update_traps() {
     }
 }
 
+void Game::sync_grid_tile(int x, int y) {
+    if (!grid_) return;
+    Tile* t = state_.world.at(x, y);
+    if (!t) return;
+    TerrainId terr = static_cast<TerrainId>(t->terrain);
+    bool solid = (terr == TerrainId::ImpenetrableRock || terr == TerrainId::Rock ||
+                  terr == TerrainId::Gems || terr == TerrainId::Gold ||
+                  terr == TerrainId::ReinforcedWall);
+    for (const Door& d : state_.doors)
+        if (d.x == x && d.y == y && d.integrity > 0.0f) { solid = true; break; }
+    grid_->set_blocked(x, y, solid);
+    int16_t field = 0;
+    int16_t accumulator = 0;
+    if (terr == TerrainId::Water) { field = 2048; accumulator = 32; }
+    else if (terr == TerrainId::Lava) { field = 4096; accumulator = 64; }
+    grid_->set_field(x, y, field);
+    grid_->set_accumulator(x, y, accumulator);
+}
+
+int16_t Game::grid_field(int x, int y) const {
+    return grid_ ? grid_->field(x, y) : 0;
+}
+
+bool Game::construction_blocked(int x, int y) const {
+    for (const Creature& c : state_.creatures) {
+        if (c.state == CreatureState::Dead) continue;
+        if (int(c.x) == x && int(c.y) == y) return true;
+    }
+    for (const Door& d : state_.doors)
+        if (d.x == x && d.y == y && d.integrity > 0.0f) return true;
+    return false;
+}
+
 void Game::execute_trigger_action(const dk2trigger::ActionRequest& req) {
     auto resolve_ap = [&](unsigned id, float& out_x, float& out_y) {
         uint32_t h = 0x9e3779b9U;
@@ -2402,6 +2459,7 @@ void Game::execute_trigger_action(const dk2trigger::ActionRequest& req) {
             int x = int(req.pos_x), y = int(req.pos_y);
             if (Tile* t = state_.world.at(x, y))
                 t->terrain = uint8_t(req.target_id & 255u);
+            sync_grid_tile(x, y);
             state_.economy.recalculate(state_.world);
             break;
         }

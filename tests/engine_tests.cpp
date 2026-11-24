@@ -423,9 +423,15 @@ int main(int argc, char** argv) {
         real.set_mission("level1");
         real.state().economy.gold = 12000;
         real.state().economy.gold_capacity = 100000;
+        int rx = -1, ry = -1;
+        for (int yy = 2; yy < real.state().world.height - 2 && rx < 0; ++yy)
+            for (int xx = 2; xx < real.state().world.width - 2; ++xx)
+                if (real.state().world.walkable(xx, yy) &&
+                    !real.construction_blocked(xx, yy)) { rx = xx; ry = yy; break; }
+        CHECK(rx >= 0);
+        CHECK(real.build_room(0, rx, ry, 0));
         for (int i = 0; i < 3; ++i)
             real.spawn_creature(0, sx >= 0 ? sx : 1, sy >= 0 ? sy : 1, 0);
-        CHECK(real.build_room(0, sx >= 0 ? sx : 1, sy >= 0 ? sy : 1, 0));
         for (int i = 0; i < 300; ++i) real.step();
         CHECK(real.state().victory);
         std::printf("mission level1: victory=%d gold=%.0f t=%.1f\n",
@@ -524,6 +530,31 @@ int main(int argc, char** argv) {
     auto normals = grid.compute_normals();
     CHECK(normals.size() == 64);
     CHECK(normals[0].gy == 0x10000);
+    {
+        Game g;
+        CHECK(g.load_map(bytes.data(), bytes.size(), nullptr));
+        int wx = -1, wy = -1;
+        for (int yy = 2; yy < g.state().world.height - 2 && wx < 0; ++yy)
+            for (int xx = 2; xx < g.state().world.width - 2; ++xx)
+                if (g.state().world.walkable(xx, yy) &&
+                    g.state().world.walkable(xx + 1, yy)) { wx = xx; wy = yy; break; }
+        CHECK(wx >= 0);
+        g.state().world.at(wx, wy)->terrain = uint8_t(TerrainId::Water);
+        g.sync_grid_tile(wx, wy);
+        CHECK(g.grid_field(wx, wy) == 2048);
+        for (int i = 0; i < 2; ++i) g.step();
+        int16_t neighbor = g.grid_field(wx + 1, wy);
+        std::printf("grid: field diffused=%d\n", neighbor);
+        CHECK(neighbor != 0);
+        int sx3 = -1, sy3 = -1;
+        for (int yy = 2; yy < g.state().world.height - 2 && sx3 < 0; ++yy)
+            for (int xx = 2; xx < g.state().world.width - 2; ++xx)
+                if (g.state().world.walkable(xx, yy)) { sx3 = xx; sy3 = yy; break; }
+        CHECK(sx3 >= 0);
+        CHECK(!g.construction_blocked(sx3, sy3));
+        g.spawn_creature(0, sx3, sy3, 0);
+        CHECK(g.construction_blocked(sx3, sy3));
+    }
     std::printf("grid: relax/wrap/block/normals OK\n");
 
     EngineClock clock;

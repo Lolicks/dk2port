@@ -42,7 +42,9 @@ private:
     std::vector<int16_t> field_, next_, accumulator_;
     std::vector<uint8_t> blocked_;
     int index(int x, int y) const {
-        return (y & (height_ - 1)) * width_ + (x & (width_ - 1));
+        int wx = ((x % width_) + width_) % width_;
+        int wy = ((y % height_) + height_) % height_;
+        return wy * width_ + wx;
     }
 };
 
