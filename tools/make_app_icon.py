@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 SOURCE = os.path.join(ROOT, "build", "Assets", "textures", "EngineTextures", "reaper.png")
-OUT = os.path.join(ROOT, "ios", "DK2Port", "Resources", "AppIcon.appiconset")
+OUT = os.path.join(ROOT, "ios", "DK2Port", "Resources", "Assets.xcassets", "AppIcon.appiconset")
 
 SIZES = [
     ("icon-40.png", 40), ("icon-58.png", 58), ("icon-60.png", 60),

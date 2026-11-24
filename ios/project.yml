@@ -10,7 +10,7 @@ targets:
     type: application
     platform: iOS
     sources:
-      - path: DK2Port/Resources/AppIcon.appiconset
+      - path: DK2Port/Resources/Assets.xcassets
       - path: DK2Port
         excludes:
           - "DK2-Bridging-Header.h"
