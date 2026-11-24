@@ -11,21 +11,22 @@ SOURCE = os.path.join(ROOT, "build", "Assets", "textures", "EngineTextures", "re
 OUT = os.path.join(ROOT, "ios", "DK2Port", "Resources", "Assets.xcassets", "AppIcon.appiconset")
 
 SIZES = [
-    ("icon-40.png", 40), ("icon-58.png", 58), ("icon-60.png", 60),
-    ("icon-80.png", 80), ("icon-87.png", 87), ("icon-120.png", 120),
-    ("icon-152.png", 152), ("icon-167.png", 167), ("icon-180.png", 180),
+    ("icon-20@2x.png", 40), ("icon-20@3x.png", 60),
+    ("icon-29@2x.png", 58), ("icon-29@3x.png", 87),
+    ("icon-40@2x.png", 80), ("icon-40@3x.png", 120),
+    ("icon-60@2x.png", 120), ("icon-60@3x.png", 180),
+    ("icon-76@2x.png", 152), ("icon-83.5@2x.png", 167),
     ("icon-1024.png", 1024),
 ]
 
 PAIRS = [
-    ("icon-40.png", "20", "2x"), ("icon-60.png", "20", "3x"),
-    ("icon-58.png", "29", "2x"), ("icon-87.png", "29", "3x"),
-    ("icon-80.png", "40", "2x"), ("icon-120.png", "40", "3x"),
-    ("icon-120.png", "60", "2x"), ("icon-180.png", "60", "3x"),
-    ("icon-152.png", "76", "2x"), ("icon-167.png", "83.5", "2x"),
+    ("icon-20@2x.png", "20", "2x"), ("icon-20@3x.png", "20", "3x"),
+    ("icon-29@2x.png", "29", "2x"), ("icon-29@3x.png", "29", "3x"),
+    ("icon-40@2x.png", "40", "2x"), ("icon-40@3x.png", "40", "3x"),
+    ("icon-60@2x.png", "60", "2x"), ("icon-60@3x.png", "60", "3x"),
+    ("icon-76@2x.png", "76", "2x"), ("icon-83.5@2x.png", "83.5", "2x"),
     ("icon-1024.png", None, None),
 ]
-
 
 def make_base(size):
     art = Image.open(SOURCE).convert("RGBA")
