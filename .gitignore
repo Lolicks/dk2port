@@ -37,3 +37,4 @@ tmp/
 !ios/DK2Port/Resources/Assets/interface/fonts/*.png
 !ios/DK2Port/Resources/Assets/textures/EngineTextures/GUI/**/*.png
 !ios/DK2Port/Resources/Assets/textures/FrontEnd/Mov_Shots/*.png
+!ios/DK2Port/Resources/AppIcon.appiconset/*.png

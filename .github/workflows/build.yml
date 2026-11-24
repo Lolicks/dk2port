@@ -119,6 +119,7 @@ jobs:
             Payload/DK2Port.app/Assets/interface/fonts/Frontend14_0.png \
             Payload/DK2Port.app/Assets/textures/EngineTextures/GUI/Icons/i-mise.png \
             Payload/DK2Port.app/Assets/integrity.json \
+            Payload/DK2Port.app/Assets.car \
             Payload/DK2Port.app/DK2Port; do
             unzip -l "$IPA" | grep -q "$f" || { echo "MISSING $f"; exit 1; }
             echo "OK $f"

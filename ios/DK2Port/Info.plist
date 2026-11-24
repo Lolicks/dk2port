@@ -8,6 +8,7 @@
   <key>CFBundleSupportedPlatforms</key>
   <array><string>iPhoneOS</string></array>
   <key>LSRequiresIPhoneOS</key><true/>
+  <key>CFBundleIconName</key><string>AppIcon</string>
   <key>CFBundleDisplayName</key><string>Dungeon Keeper 2</string>
   <key>CFBundleIdentifier</key><string>com.dk2port.ios</string>
   <key>CFBundleVersion</key><string>1</string>
