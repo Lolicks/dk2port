@@ -39,11 +39,11 @@ final class DK2AudioController {
         engine.connect(musicBus, to: masterBus, format: nil)
         engine.connect(speechBus, to: masterBus, format: nil)
         engine.connect(sfxBus, to: masterBus, format: nil)
-        engine.connect(environment, to: sfxBus, format: environment.outputFormat)
+        engine.connect(environment, to: sfxBus, format: environment.outputFormat(forBus: 0))
         engine.connect(masterBus, to: engine.mainMixerNode, format: nil)
 
-        environment.distanceFilter = 2
-        environment.rolloffFactor = 1
+        environment.distanceAttenuationParameters.distanceFilter = 2
+        environment.distanceAttenuationParameters.rolloffFactor = 1
         applyVolumes()
 
         NotificationCenter.default.addObserver(
@@ -97,7 +97,6 @@ final class DK2AudioController {
         listenerVX = vx
         listenerVY = vy
         environment.listenerPosition = AVAudio3DPoint(x: x, y: 0, z: -y)
-        environment.listenerVelocity = AVAudio3DVector(x: vx, y: 0, z: -vy)
     }
 
     /// Loads one decoded sample from the imported bundle onto a bus.
