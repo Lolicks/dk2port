@@ -1,8 +1,6 @@
 import Foundation
 import SwiftUI
 
-/// User-facing settings persisted in UserDefaults. Rendering consumers may
-/// observe `renderingDidChange`; audio observes `audioDidChange` directly.
 enum DK2Settings {
     enum Key {
         static let masterVolume = "dk2.settings.masterVolume"
@@ -12,6 +10,36 @@ enum DK2Settings {
         static let gamma = "dk2.settings.gamma"
         static let shadows = "dk2.settings.shadows"
         static let viewDistance = "dk2.settings.viewDistance"
+
+        static let resolution = "dk2.settings.resolution"
+        static let fullscreen = "dk2.settings.fullscreen"
+        static let antialiasing = "dk2.settings.antialiasing"
+        static let openGl = "dk2.settings.openGl"
+        static let ssao = "dk2.settings.ssao"
+        static let gammaCorrection = "dk2.settings.gammaCorrection"
+        static let hdTextures = "dk2.settings.hdTextures"
+        static let bitDepth = "dk2.settings.bitDepth"
+        static let refreshRate = "dk2.settings.refreshRate"
+        static let verticalSync = "dk2.settings.verticalSync"
+        static let anisotropicFiltering = "dk2.settings.anisotropicFiltering"
+
+        static let voiceVolumeValue = "dk2.settings.voiceVolume"
+        static let voiceEnabled = "dk2.settings.voiceEnabled"
+        static let musicEnabled = "dk2.settings.musicEnabled"
+        static let sfxEnabled = "dk2.settings.sfxEnabled"
+
+        static let mouseSensitivity = "dk2.settings.mouseSensitivity"
+        static let gameSpeed = "dk2.settings.gameSpeed"
+        static let invertMouse = "dk2.settings.invertMouse"
+        static let scrollSpeed = "dk2.settings.scrollSpeed"
+
+        static let all = [
+            masterVolume, musicVolume, sfxVolume, speechVolume, gamma, shadows,
+            viewDistance, resolution, fullscreen, antialiasing, openGl, ssao,
+            gammaCorrection, hdTextures, bitDepth, refreshRate, verticalSync,
+            anisotropicFiltering, voiceVolumeValue, voiceEnabled, musicEnabled,
+            sfxEnabled, mouseSensitivity, gameSpeed, invertMouse, scrollSpeed
+        ]
     }
 
     static let audioDidChange = Notification.Name("dk2.settings.audioDidChange")
@@ -21,6 +49,30 @@ enum DK2Settings {
         let defaults = UserDefaults.standard
         guard defaults.object(forKey: key) != nil else { return fallback }
         return defaults.float(forKey: key)
+    }
+
+    private static func boolean(_ key: String, _ fallback: Bool) -> Bool {
+        let defaults = UserDefaults.standard
+        guard defaults.object(forKey: key) != nil else { return fallback }
+        return defaults.bool(forKey: key)
+    }
+
+    static func value(_ key: String, _ fallback: Float) -> Float { number(key, fallback) }
+    static func flag(_ key: String, _ fallback: Bool) -> Bool { boolean(key, fallback) }
+    static func text(_ key: String, _ fallback: String) -> String {
+        UserDefaults.standard.string(forKey: key) ?? fallback
+    }
+
+    static func setValue(_ key: String, _ value: Float) {
+        UserDefaults.standard.set(value, forKey: key)
+    }
+
+    static func setFlag(_ key: String, _ value: Bool) {
+        UserDefaults.standard.set(value, forKey: key)
+    }
+
+    static func setText(_ key: String, _ value: String) {
+        UserDefaults.standard.set(value, forKey: key)
     }
 
     static var masterVolume: Float {
@@ -72,11 +124,7 @@ enum DK2Settings {
     }
 
     static var shadows: Bool {
-        get {
-            let defaults = UserDefaults.standard
-            guard defaults.object(forKey: Key.shadows) != nil else { return true }
-            return defaults.bool(forKey: Key.shadows)
-        }
+        get { boolean(Key.shadows, true) }
         set {
             UserDefaults.standard.set(newValue, forKey: Key.shadows)
             NotificationCenter.default.post(name: renderingDidChange, object: nil)
@@ -85,10 +133,7 @@ enum DK2Settings {
 
     static func reset() {
         let defaults = UserDefaults.standard
-        for key in [Key.masterVolume, Key.musicVolume, Key.sfxVolume,
-                    Key.speechVolume, Key.gamma, Key.shadows, Key.viewDistance] {
-            defaults.removeObject(forKey: key)
-        }
+        for key in Key.all { defaults.removeObject(forKey: key) }
         NotificationCenter.default.post(name: audioDidChange, object: nil)
         NotificationCenter.default.post(name: renderingDidChange, object: nil)
     }
@@ -96,100 +141,17 @@ enum DK2Settings {
 
 struct DK2OptionsView: View {
     var onDone: (() -> Void)? = nil
-
-    @State private var master = DK2Settings.masterVolume
-    @State private var music = DK2Settings.musicVolume
-    @State private var sfx = DK2Settings.sfxVolume
-    @State private var speech = DK2Settings.speechVolume
-    @State private var gamma = DK2Settings.gamma
-    @State private var viewDistance = DK2Settings.viewDistance
-    @State private var shadows = DK2Settings.shadows
+    @StateObject private var nav = DK2FrontEndModel()
 
     var body: some View {
-        VStack(spacing: 14) {
-            HStack {
-                Text("Options")
-                    .font(.system(size: 22, weight: .bold, design: .serif))
-                    .foregroundColor(Color(red: 0.95, green: 0.85, blue: 0.62))
-                Spacer()
+        DK2OptionsMainScreen()
+            .environmentObject(nav)
+            .overlay(alignment: .topTrailing) {
                 if let onDone = onDone {
                     Button("Done") { onDone() }
-                        .foregroundColor(Color(red: 0.95, green: 0.85, blue: 0.62))
+                        .foregroundColor(DK2UIStyle.gold)
+                        .padding()
                 }
             }
-
-            settingSlider(title: "Master volume", value: $master, range: 0...1) {
-                DK2Settings.masterVolume = $0
-            }
-            settingSlider(title: "Music volume", value: $music, range: 0...1) {
-                DK2Settings.musicVolume = $0
-            }
-            settingSlider(title: "SFX volume", value: $sfx, range: 0...1) {
-                DK2Settings.sfxVolume = $0
-            }
-            settingSlider(title: "Speech volume", value: $speech, range: 0...1) {
-                DK2Settings.speechVolume = $0
-            }
-            settingSlider(title: "Gamma", value: $gamma, range: 0.5...2.0) {
-                DK2Settings.gamma = $0
-            }
-            settingSlider(title: "View distance", value: $viewDistance, range: 0.5...2.0) {
-                DK2Settings.viewDistance = $0
-            }
-
-            Toggle(isOn: $shadows) {
-                Text("Shadows").foregroundColor(.white)
-            }
-            .onChange(of: shadows) { DK2Settings.shadows = $0 }
-            .toggleStyle(.switch)
-
-            HStack(spacing: 16) {
-                Button("Reset Defaults") {
-                    DK2Settings.reset()
-                    master = DK2Settings.masterVolume
-                    music = DK2Settings.musicVolume
-                    sfx = DK2Settings.sfxVolume
-                    speech = DK2Settings.speechVolume
-                    gamma = DK2Settings.gamma
-                    viewDistance = DK2Settings.viewDistance
-                    shadows = DK2Settings.shadows
-                }
-                .foregroundColor(.gray)
-                Spacer()
-            }
-        }
-        .padding(18)
-        .background(Color(red: 0.12, green: 0.08, blue: 0.07).opacity(0.96))
-        .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12)
-            .stroke(Color(red: 0.45, green: 0.32, blue: 0.18), lineWidth: 2))
-        .padding()
-        .onAppear {
-            master = DK2Settings.masterVolume
-            music = DK2Settings.musicVolume
-            sfx = DK2Settings.sfxVolume
-            speech = DK2Settings.speechVolume
-            gamma = DK2Settings.gamma
-            viewDistance = DK2Settings.viewDistance
-            shadows = DK2Settings.shadows
-        }
-    }
-
-    @ViewBuilder
-    private func settingSlider(title: String,
-                               value: Binding<Float>,
-                               range: ClosedRange<Float>,
-                               onChange: @escaping (Float) -> Void) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack {
-                Text(title).foregroundColor(.white)
-                Spacer()
-                Text(String(format: "%.2f", value.wrappedValue))
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(.gray)
-            }
-            Slider(value: value, in: range)
-                .onChange(of: value.wrappedValue) { onChange($0) }
-        }
     }
 }

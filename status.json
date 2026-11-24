@@ -2,7 +2,7 @@
   "project": "Dungeon Keeper II — native iOS port",
   "repository": "https://github.com/Lolicks/dk2port",
   "updated": "2026-11-24",
-  "verdict": "Core hardening 10/10 complete: full state round-trips through DK2S v6 (rooms, doors, battles, worker tasks, trigger text and camera).",
+  "verdict": "Full UI 1:1 pass: 28 original screens + popups, original texts/fonts, all 24 movies; 77 GUI icon paths still missing from shipped data (fallbacks used).",
   "build": {
     "last_successful_run": "https://github.com/Lolicks/dk2port/actions/runs/45244837079",
     "ipa_size_bytes": 734290169,
@@ -83,9 +83,14 @@
       "evidence": "DKAF v2 morph poses+weights, 30fps, VERT UV/normal, 255-frame clips (Mis-Idle1)"
     },
     {
+      "name": "Original UI text and bitmap fonts",
+      "state": "done",
+      "evidence": "tools/gen_ui_text.py + gen_ui_fonts.sh; Text.properties 3086 ids, Speech.properties 1542 ids, 22 BF4 fonts; 189 XML menu ids resolve; DK2L10n + DK2FontRenderer"
+    },
+    {
       "name": "Cutscene/video playback in iOS UI",
-      "state": "partial",
-      "evidence": "CutsceneView.swift + Intro menu button; PNG frames produced in final build from TQI"
+      "state": "done",
+      "evidence": "CutscenePlayer.swift/CutsceneView.swift; 24/24 TGQ decoded to 48 PNG frames + audio, posters, Speech.str subtitles, movie list/locked states"
     },
     {
       "name": "In-game audio (SDT -> AAC/PCM, positional mixer)",
@@ -95,7 +100,7 @@
     {
       "name": "Full FrontEnd UI (build/traps/doors/spells/creature panels)",
       "state": "partial",
-      "evidence": "GamePanels.swift/HUDView.swift; 8 command notifications wired in GameViewController"
+      "evidence": "DK2Screens.swift + FrontEndView.swift; 28 screens/popups from MainMenu.xml, original menuText/buttons/options/extras/MP/MPD; HUDView/GamePanels 1:1 layout; 77 GUI icon paths absent in installed data, graceful fallbacks; device compile pending"
     },
     {
       "name": "Complete creature AI (jobs, moods, relations from KWD)",

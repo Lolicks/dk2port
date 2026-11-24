@@ -111,7 +111,8 @@ final class DK2GameViewController: UIViewController {
             accumulator -= tick
             steps += 1
         }
-        let snapshot = bridge.snapshot
+        let snapshot = bridge.snapshot as NSDictionary
+        let state = DK2GameViewController.stateSnapshot(snapshot)
         let cx = DK2GameViewController.number(snapshot["centerX"])
         let cy = DK2GameViewController.number(snapshot["centerY"])
         let dt = Swift.max(0.001, link.duration * TimeInterval(link.frameInterval))
@@ -120,10 +121,9 @@ final class DK2GameViewController: UIViewController {
         lastListenerX = cx
         lastListenerY = cy
         audio.updateListener(x: cx, y: cy, vx: vx, vy: vy)
-        emitStateAudioEvents(snapshot as NSDictionary)
-        DK2SaveManager.shared.updateAutosave(snapshot: snapshot as NSDictionary,
-                                             bridge: bridge)
-        onState?(snapshot as NSDictionary)
+        emitStateAudioEvents(snapshot)
+        DK2SaveManager.shared.updateAutosave(snapshot: snapshot, bridge: bridge)
+        onState?(state)
     }
 
     /// Emits NotificationCenter game events consumed by DK2EventAudioResponder.
@@ -193,6 +193,18 @@ final class DK2GameViewController: UIViewController {
         if let v = value as? Bool { return v }
         if let v = value as? NSNumber { return v.boolValue }
         return false
+    }
+
+    private static func stateSnapshot(_ snapshot: NSDictionary) -> NSDictionary {
+        let state = NSMutableDictionary(dictionary: snapshot)
+        state["gold"] = snapshot["gold"] ?? NSNumber(value: 0)
+        state["mana"] = snapshot["mana"] ?? NSNumber(value: 0)
+        state["manaMax"] = snapshot["manaMax"] ?? NSNumber(value: 0)
+        state["goldCapacity"] = snapshot["goldCapacity"] ?? NSNumber(value: 0)
+        state["creatures"] = snapshot["creatures"] ?? NSNumber(value: 0)
+        state["rooms"] = snapshot["rooms"] ?? NSNumber(value: 0)
+        state["ticks"] = snapshot["ticks"] ?? NSNumber(value: 0)
+        return state
     }
 
     private func installGestures(on target: UIView) {

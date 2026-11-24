@@ -2,36 +2,6 @@ import Foundation
 import SwiftUI
 import UIKit
 
-// MARK: - Game command notifications (wire these in DK2GameViewController)
-//
-// All commands are posted on NotificationCenter.default with object: nil.
-// Payload keys live in DK2GameCommand.Key. Every name is unique and stable.
-//
-//  dk2.command.build    -> category:String("room"|"trap"|"door"), index:Int, name:String
-//  dk2.command.spell    -> index:Int, name:String
-//  dk2.command.creature -> index:Int, name:String
-//  dk2.command.pause    -> paused:Bool
-//  dk2.command.speed    -> multiplier:Int
-//  dk2.command.save     -> slot:String
-//  dk2.command.load     -> slot:String
-//  dk2.command.quit     -> (no payload)
-//
-// Example observer in GameViewController.swift:
-//   let nc = NotificationCenter.default
-//   names.forEach { nc.addObserver(self, selector: #selector(onCommand(_:)), name: $0, object: nil) }
-//   @objc func onCommand(_ note: Notification) {
-//     guard let info = note.userInfo else { return }
-//     switch note.name {
-//     case DK2GameCommand.build:
-//       let cat = info[DK2GameCommand.Key.category] as? String ?? ""
-//       let idx = info[DK2GameCommand.Key.index] as? Int ?? 0
-//       ...
-//     case DK2GameCommand.save:
-//       let slot = info[DK2GameCommand.Key.slot] as? String ?? "slot1"
-//       saveGame(name: slot)
-//     ...
-//     }
-//   }
 enum DK2GameCommand {
     static let center = NotificationCenter.default
 
@@ -96,8 +66,6 @@ enum DK2GameCommand {
     }
 }
 
-// MARK: - Optional, defensive data loaders (local to the UI layer)
-
 struct DK2PanelGameData: Decodable {
     let creatureNames: [String]
     let roomNames: [String]
@@ -105,6 +73,7 @@ struct DK2PanelGameData: Decodable {
     let keeperSpellNames: [String]
     let creatureSpellNames: [String]
     let doorNames: [String]
+    let objectNames: [String]
 
     enum CodingKeys: String, CodingKey {
         case creatureNames = "creature_names"
@@ -113,6 +82,7 @@ struct DK2PanelGameData: Decodable {
         case keeperSpellNames = "keeper_spell_names"
         case creatureSpellNames = "creature_spell_names"
         case doorNames = "door_names"
+        case objectNames = "object_names"
     }
 
     init(from decoder: Decoder) throws {
@@ -123,6 +93,7 @@ struct DK2PanelGameData: Decodable {
         keeperSpellNames = (try? c.decode([String].self, forKey: .keeperSpellNames)) ?? []
         creatureSpellNames = (try? c.decode([String].self, forKey: .creatureSpellNames)) ?? []
         doorNames = (try? c.decode([String].self, forKey: .doorNames)) ?? []
+        objectNames = (try? c.decode([String].self, forKey: .objectNames)) ?? []
     }
 }
 
@@ -229,8 +200,6 @@ enum DK2PanelData {
     }
 }
 
-// MARK: - Original artwork lookup with graceful fallback
-
 enum DK2GameArt {
     static func frontEnd(_ relative: String) -> UIImage? { DK2Art.image(relative) }
 
@@ -241,12 +210,50 @@ enum DK2GameArt {
         return UIImage(contentsOfFile: url.path)
     }
 
-    static func fallback() -> UIImage? { DK2Art.image("Bigbutton.PNG") }
+    static func fallback() -> UIImage? { DK2UIStyle.image("Bigbutton.PNG") }
 
-    /// Maps a game-data name to original artwork, trying engine then FrontEnd art.
-    static func image(for name: String, category: DK2GameCommand.Category? = nil) -> UIImage? {
+    static func gui(_ path: String, fallback: String? = nil) -> UIImage? {
+        var candidates: [String] = [path]
+        candidates.append(path.replacingOccurrences(of: "Textures/GUI/", with: "textures/GUI/"))
+        let base = (path as NSString).lastPathComponent
+        if !base.isEmpty {
+            candidates.append(base)
+            candidates.append("textures/EngineTextures/\(base)")
+        }
+        let stripped = path.replacingOccurrences(of: "Textures/GUI/", with: "")
+                           .replacingOccurrences(of: "textures/GUI/", with: "")
+        if stripped != path {
+            candidates.append("textures/EngineTextures/\(stripped)")
+            candidates.append(stripped)
+        }
+        for candidate in candidates {
+            if let image = DK2UIStyle.image(candidate) { return image }
+        }
+        if let fallbackName = fallback, let image = DK2UIStyle.image(fallbackName) { return image }
+        return fallback()
+    }
+
+    static func tabIcon(_ tab: String, active: Bool = false) -> UIImage? {
+        let singular: String
+        let plural: String
+        switch tab {
+        case "creature": singular = "creature"; plural = "creatures"
+        case "room": singular = "room"; plural = "rooms"
+        case "spell": singular = "spell"; plural = "spells"
+        case "workshop": singular = "workshop"; plural = "workshop"
+        default: singular = tab; plural = tab
+        }
+        if active {
+            return gui("Textures/GUI/Icons/selected-\(singular).png",
+                       fallback: "Hilight_Frame.png")
+        }
+        return gui("Textures/GUI/Tabs/t-\(plural).png", fallback: "Bigbutton.PNG")
+    }
+
+    static func image(for name: String, category: DK2GameCommand.Category? = nil,
+                      kind: String? = nil) -> UIImage? {
         let key = normalized(name)
-        let candidates = artNames(for: key, category: category)
+        let candidates = artNames(for: key, category: category, kind: kind)
         for path in candidates {
             if let image = engine(path) { return image }
             if let image = frontEnd(path) { return image }
@@ -267,7 +274,8 @@ enum DK2GameArt {
         return s.trimmingCharacters(in: CharacterSet(charactersIn: "_"))
     }
 
-    private static func artNames(for key: String, category: DK2GameCommand.Category?) -> [String] {
+    private static func artNames(for key: String, category: DK2GameCommand.Category?,
+                                 kind: String?) -> [String] {
         var names = [String]()
         func add(_ base: String) {
             names.append(base + ".png")
@@ -283,12 +291,12 @@ enum DK2GameArt {
             case "hatchery": add("hatchery")
             case "dungeon_heart": add("heart")
             case "library": add("dark_library")
-            case "training": add("training")
+            case "training", "training_room": add("training")
             case "wooden_bridge": add("Bridge_Wooden")
-            case "guard": add("guard_room")
-            case "workshop": add("GUI/Rooms/workshop")
+            case "guard", "guard_room": add("guard_room")
+            case "workshop", "work_shop": add("GUI/Rooms/workshop")
             case "prison": add("prison")
-            case "torture": add("torture")
+            case "torture", "torture_chamber": add("torture")
             case "temple": add("temple")
             case "graveyard", "crypt": add("graveyard")
             case "casino": add("casino")
@@ -325,45 +333,63 @@ enum DK2GameArt {
             default: break
             }
         default:
-            switch key {
-            case "imp": add("imp")
-            case "bile_demon": add("bile_demon")
-            case "mistress": add("mistress")
-            case "warlock": add("warlock")
-            case "dark_elf": add("dark_elf")
-            case "goblin": add("goblin")
-            case "vampire": add("vampire")
-            case "skeleton": add("skeleton")
-            case "troll": add("troll")
-            case "salamander": add("salamander")
-            case "firefly", "unique_firefly": add("firefly")
-            case "knight": add("knight")
-            case "dwarf": add("dwarf")
-            case "giant": add("giant")
-            case "wizard": add("wizard")
-            case "elven_archer": add("elf")
-            case "thief": add("thief")
-            case "monk": add("monk")
-            case "fairy": add("fairy")
-            case "king_reginald": add("king")
-            case "black_knight": add("black_knight")
-            case "dark_angel": add("dark_angel")
-            case "rogue": add("rogue")
-            case "guard": add("guard")
-            case "horny": add("tba")
-            case "stone_knight": add("stone_knight")
-            case "lord_of_the_land": add("lord")
-            case "royal_guard": add("royal_guard")
-            case "prince_tristran", "prince_felix", "prince_balder": add("prince")
-            case "maiden_of_the_nest", "jack": add("tba")
-            default: break
+            switch kind ?? "" {
+            case "spell":
+                switch key {
+                case "possession": add("goblin")
+                case "create_imp": add("imp")
+                case "oneshotreaper", "reaper": add("reaper")
+                case "create_gold": add("Treasury")
+                case "call_to_arms": add("tba")
+                default: add("tba")
+                }
+            case "workshop":
+                switch key {
+                case "call_to_arms": add("tba")
+                case "spell_book": add("tba")
+                case "portal_gem": add("portal")
+                case "anvil": add("tba")
+                default: add("tba")
+                }
+            default:
+                switch key {
+                case "imp": add("imp")
+                case "bile_demon": add("bile_demon")
+                case "mistress": add("mistress")
+                case "warlock": add("warlock")
+                case "dark_elf": add("dark_elf")
+                case "goblin": add("goblin")
+                case "vampire": add("vampire")
+                case "skeleton": add("skeleton")
+                case "troll": add("troll")
+                case "salamander": add("salamander")
+                case "firefly", "unique_firefly": add("firefly")
+                case "knight": add("knight")
+                case "dwarf": add("dwarf")
+                case "giant": add("giant")
+                case "wizard": add("wizard")
+                case "elven_archer": add("elf")
+                case "thief": add("thief")
+                case "monk": add("monk")
+                case "fairy": add("fairy")
+                case "king_reginald": add("king")
+                case "black_knight": add("black_knight")
+                case "dark_angel": add("dark_angel")
+                case "rogue": add("rogue")
+                case "guard": add("guard")
+                case "horny": add("tba")
+                case "stone_knight": add("stone_knight")
+                case "lord_of_the_land": add("lord")
+                case "royal_guard": add("royal_guard")
+                case "prince_tristran", "prince_felix", "prince_balder": add("prince")
+                case "maiden_of_the_nest", "jack": add("tba")
+                default: break
+                }
             }
         }
         return names
     }
 }
-
-// MARK: - Panel item model
 
 struct DK2PanelItem: Identifiable {
     let id: Int
@@ -371,9 +397,22 @@ struct DK2PanelItem: Identifiable {
     let cost: Int?
     let detail: String?
     let artName: String?
+    let kind: String?
 }
 
-// MARK: - Reusable original-art button
+struct DK2GameTab: Identifiable {
+    let key: String
+    let titleID: Int
+    let hintID: Int
+    let tipID: Int
+    var id: String { key }
+}
+
+struct DK2BuildSubTab: Identifiable {
+    let category: DK2GameCommand.Category
+    let titleID: Int
+    var id: DK2GameCommand.Category { category }
+}
 
 struct DK2ArtTileButton: View {
     let item: DK2PanelItem
@@ -383,46 +422,143 @@ struct DK2ArtTileButton: View {
     var body: some View {
         Button(action: action) {
             ZStack(alignment: .bottom) {
-                if let image = DK2GameArt.image(for: item.artName ?? item.name, category: category) {
+                if let image = DK2GameArt.image(for: item.artName ?? item.name,
+                                                category: category, kind: item.kind) {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFill()
                 } else {
-                    Rectangle().fill(Color(red: 0.16, green: 0.12, blue: 0.10))
+                    Rectangle().fill(DK2UIStyle.panelDark)
                 }
                 LinearGradient(gradient: Gradient(colors: [.clear, .black.opacity(0.85)]),
                                startPoint: .center, endPoint: .bottom)
                 VStack(spacing: 1) {
-                    Text(item.name)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(.white)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.center)
+                    DK2BitmapText(item.name, font: "Ingame10", size: 10,
+                                  color: .white)
                     if let cost = item.cost {
-                        Text("\(cost)g")
-                            .font(.system(size: 10, weight: .bold, design: .monospaced))
-                            .foregroundColor(Color(red: 0.95, green: 0.82, blue: 0.42))
+                        DK2BitmapText("\(cost)g", font: "Ingame10", size: 10,
+                                      color: DK2UIStyle.gold)
                     }
                 }
                 .padding(.horizontal, 2)
                 .padding(.bottom, 3)
             }
-            .frame(height: 88)
+            .frame(height: 84)
             .cornerRadius(5)
             .overlay(RoundedRectangle(cornerRadius: 5)
-                .stroke(Color(red: 0.45, green: 0.32, blue: 0.18), lineWidth: 1))
+                .stroke(DK2UIStyle.border, lineWidth: 1))
         }
         .buttonStyle(.plain)
+        .allowsHitTesting(true)
     }
 }
 
-// MARK: - Build panels (rooms / traps / doors)
+struct DK2TileFlow: View {
+    let items: [DK2PanelItem]
+    let category: DK2GameCommand.Category?
+    let maxRows: Int
+    let tileWidth: CGFloat
+    let action: (DK2PanelItem) -> Void
+
+    @State private var page = 0
+
+    var body: some View {
+        GeometryReader { geo in
+            let perRow = max(1, Int(geo.size.width / max(1, tileWidth)))
+            let capacity = max(1, perRow * max(1, maxRows))
+            let pages = max(1, (items.count + capacity - 1) / capacity)
+            let current = min(Swift.max(0, page), pages - 1)
+            let visible = Array(items.dropFirst(current * capacity).prefix(capacity))
+            let rows = max(0, (visible.count + perRow - 1) / perRow)
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(0..<rows, id: \.self) { row in
+                    HStack(spacing: 6) {
+                        ForEach(visible.dropFirst(row * perRow).prefix(perRow)) { item in
+                            DK2ArtTileButton(item: item, category: category) { action(item) }
+                        }
+                        Spacer(minLength: 0)
+                    }
+                }
+                Spacer(minLength: 0)
+                HStack(spacing: 8) {
+                    Button {
+                        page = Swift.max(0, current - 1)
+                    } label: {
+                        Text("<").foregroundColor(DK2UIStyle.gold)
+                    }
+                    Spacer()
+                    Text("\(current + 1) / \(pages)")
+                        .foregroundColor(DK2UIStyle.parchment)
+                    Spacer()
+                    Button {
+                        page = min(pages - 1, current + 1)
+                    } label: {
+                        Text(">").foregroundColor(DK2UIStyle.gold)
+                    }
+                }
+                .font(.system(size: 11))
+                .buttonStyle(.plain)
+                .allowsHitTesting(true)
+            }
+            .frame(width: geo.size.width, alignment: .leading)
+        }
+    }
+}
+
+struct DK2GameTabStrip: View {
+    let tabs: [DK2GameTab]
+    @Binding var selection: String
+    let hint: Binding<String>
+    let tooltip: Binding<String>
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(tabs) { tab in
+                Button {
+                    selection = tab.key
+                    DK2UIStyle.postFrontEndSound()
+                } label: {
+                    ZStack {
+                        if let icon = DK2GameArt.tabIcon(tab.key, active: false) {
+                            Image(uiImage: icon).resizable().scaledToFit()
+                        }
+                        if selection == tab.key,
+                           let active = DK2GameArt.tabIcon(tab.key, active: true) {
+                            Image(uiImage: active).resizable().scaledToFit()
+                        }
+                    }
+                    .frame(width: 92, height: 44)
+                    .padding(3)
+                    .background(selection == tab.key ? DK2UIStyle.gold.opacity(0.28)
+                                                     : Color.black.opacity(0.55))
+                    .overlay(RoundedRectangle(cornerRadius: 5)
+                        .stroke(selection == tab.key ? DK2UIStyle.gold : DK2UIStyle.border,
+                                lineWidth: selection == tab.key ? 2 : 1))
+                }
+                .buttonStyle(.plain)
+                .allowsHitTesting(true)
+                .background(DK2HoverArea { active in
+                    hint.wrappedValue = active ? DK2L10n.shared[tab.hintID] : ""
+                    tooltip.wrappedValue = active ? DK2L10n.shared[tab.tipID] : ""
+                })
+            }
+        }
+    }
+}
 
 struct DK2BuildPanel: View {
     @State private var tab: DK2GameCommand.Category
 
     init(defaultTab: DK2GameCommand.Category = .room) {
         _tab = State(initialValue: defaultTab)
+    }
+
+    private var subTabs: [DK2BuildSubTab] {
+        [
+            DK2BuildSubTab(category: .room, titleID: 1809),
+            DK2BuildSubTab(category: .trap, titleID: 324),
+            DK2BuildSubTab(category: .door, titleID: 330)
+        ]
     }
 
     private var items: [DK2PanelItem] {
@@ -433,55 +569,55 @@ struct DK2BuildPanel: View {
             return names.enumerated().map { index, name in
                 DK2PanelItem(id: index, name: name,
                              cost: DK2PanelData.cost(for: name, section: "rooms", keys: ["cost"]),
-                             detail: nil, artName: name)
+                             detail: nil, artName: name, kind: nil)
             }
         case .trap:
             let names = data?.trapNames ?? []
             return names.enumerated().map { index, name in
                 DK2PanelItem(id: index, name: name,
                              cost: DK2PanelData.cost(for: name, section: "traps", keys: ["gold_cost"]),
-                             detail: nil, artName: name)
+                             detail: nil, artName: name, kind: nil)
             }
         case .door:
             let names = data?.doorNames ?? []
             return names.enumerated().map { index, name in
                 DK2PanelItem(id: index, name: name,
                              cost: DK2PanelData.cost(for: name, section: "doors", keys: ["gold_cost"]),
-                             detail: nil, artName: name)
+                             detail: nil, artName: name, kind: nil)
             }
         }
     }
 
     var body: some View {
-        VStack(spacing: 8) {
-            Picker("Build", selection: $tab) {
-                Text("Rooms").tag(DK2GameCommand.Category.room)
-                Text("Traps").tag(DK2GameCommand.Category.trap)
-                Text("Doors").tag(DK2GameCommand.Category.door)
-            }
-            .pickerStyle(.segmented)
-            .colorMultiply(Color(red: 0.95, green: 0.82, blue: 0.55))
-
-            ScrollView {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 8)], spacing: 8) {
-                    ForEach(items) { item in
-                        DK2ArtTileButton(item: item, category: tab) {
-                            DK2GameCommand.postBuild(category: tab, index: item.id, name: item.name)
-                        }
+        VStack(spacing: 6) {
+            HStack(spacing: 4) {
+                ForEach(subTabs) { sub in
+                    Button {
+                        tab = sub.category
+                        DK2UIStyle.postFrontEndSound()
+                    } label: {
+                        DK2BitmapText(DK2L10n.shared[sub.titleID], font: "Ingame14", size: 14,
+                                      color: tab == sub.category ? DK2UIStyle.gold
+                                                                 : DK2UIStyle.parchment)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(tab == sub.category ? Color.black.opacity(0.7)
+                                                            : Color.black.opacity(0.35))
+                            .overlay(RoundedRectangle(cornerRadius: 4)
+                                .stroke(tab == sub.category ? DK2UIStyle.gold : DK2UIStyle.border,
+                                        lineWidth: 1))
                     }
+                    .buttonStyle(.plain)
+                    .allowsHitTesting(true)
                 }
-                .padding(4)
+                Spacer()
             }
-            if items.isEmpty {
-                Spacer()
-                Text("No build data bundled.").foregroundColor(.gray)
-                Spacer()
+            DK2TileFlow(items: items, category: tab, maxRows: 2, tileWidth: 98) { item in
+                DK2GameCommand.postBuild(category: tab, index: item.id, name: item.name)
             }
         }
     }
 }
-
-// MARK: - Spell panel (keeper + creature spell reference)
 
 struct DK2SpellPanel: View {
     @State private var showCreatureSpells = false
@@ -489,52 +625,42 @@ struct DK2SpellPanel: View {
     private var keeperItems: [DK2PanelItem] {
         (DK2PanelData.gameData?.keeperSpellNames ?? []).enumerated().map { index, name in
             DK2PanelItem(id: index, name: name,
-                         cost: DK2PanelData.cost(for: name, section: "keeper_spells", keys: ["mana_cost"]),
-                         detail: nil, artName: name)
+                         cost: DK2PanelData.cost(for: name, section: "keeper_spells",
+                                                 keys: ["mana_cost"]),
+                         detail: nil, artName: name, kind: "spell")
         }
     }
 
     private var creatureItems: [DK2PanelItem] {
         (DK2PanelData.gameData?.creatureSpellNames ?? []).enumerated().map { index, name in
-            DK2PanelItem(id: index, name: name, cost: nil, detail: "Creature spell", artName: name)
+            DK2PanelItem(id: index, name: name, cost: nil, detail: nil,
+                         artName: name, kind: "spell")
         }
     }
 
     var body: some View {
-        VStack(spacing: 8) {
-            Text("Keeper Spells").font(.headline).foregroundColor(Color(red: 0.95, green: 0.82, blue: 0.55))
-            ScrollView {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 8)], spacing: 8) {
-                    ForEach(keeperItems) { item in
-                        DK2ArtTileButton(item: item, category: nil) {
-                            DK2GameCommand.postSpell(index: item.id, name: item.name)
-                        }
-                    }
+        VStack(spacing: 6) {
+            HStack {
+                DK2BitmapText(DK2L10n.shared[320], font: "Ingame14", size: 14,
+                              color: DK2UIStyle.gold)
+                Spacer()
+                Button {
+                    showCreatureSpells.toggle()
+                    DK2UIStyle.postFrontEndSound()
+                } label: {
+                    DK2BitmapText(showCreatureSpells ? "Creature Spells" : "Keeper Spells",
+                                  font: "Ingame10", size: 10, color: DK2UIStyle.parchment)
                 }
-                .padding(4)
+                .buttonStyle(.plain)
+                .allowsHitTesting(true)
             }
-            Button { showCreatureSpells.toggle() } label: {
-                Text(showCreatureSpells ? "Hide creature spells (\(creatureItems.count))"
-                                        : "Creature spells (\(creatureItems.count))")
-                    .foregroundColor(Color(red: 0.95, green: 0.82, blue: 0.55))
-            }
-            if showCreatureSpells {
-                ScrollView {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 8)], spacing: 8) {
-                        ForEach(creatureItems) { item in
-                            DK2ArtTileButton(item: item, category: nil) {
-                                DK2GameCommand.postSpell(index: item.id, name: item.name)
-                            }
-                        }
-                    }
-                    .padding(4)
-                }
+            DK2TileFlow(items: showCreatureSpells ? creatureItems : keeperItems,
+                        category: nil, maxRows: 2, tileWidth: 98) { item in
+                DK2GameCommand.postSpell(index: item.id, name: item.name)
             }
         }
     }
 }
-
-// MARK: - Creature panel (46 creatures, selectable)
 
 struct DK2CreaturePanel: View {
     @State private var selectedIndex: Int? = nil
@@ -547,7 +673,8 @@ struct DK2CreaturePanel: View {
             var detail: String? = nil
             if let hp = hp { detail = "HP \(hp)" }
             if let pay = pay { detail = (detail ?? "") + "  Pay \(pay)" }
-            return DK2PanelItem(id: index, name: name, cost: nil, detail: detail, artName: name)
+            return DK2PanelItem(id: index, name: name, cost: nil, detail: detail,
+                                artName: name, kind: "creature")
         }
     }
 
@@ -559,36 +686,52 @@ struct DK2CreaturePanel: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            TextField("Search creatures", text: $query)
-                .textFieldStyle(.roundedBorder)
-                .padding(.horizontal, 4)
-            ScrollView {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 8)], spacing: 8) {
-                    ForEach(filtered) { item in
-                        DK2ArtTileButton(item: item, category: nil) {
-                            selectedIndex = item.id
-                            DK2GameCommand.postCreature(index: item.id, name: item.name)
-                        }
-                        .overlay(RoundedRectangle(cornerRadius: 5)
-                            .stroke(selectedIndex == item.id ? Color.yellow : Color.clear, lineWidth: 2))
-                    }
+            HStack {
+                TextField(DK2L10n.shared[1807], text: $query)
+                    .textFieldStyle(.roundedBorder)
+                if let index = selectedIndex, index < creatures.count {
+                    DK2BitmapText(creatures[index].detail ?? creatures[index].name,
+                                  font: "Ingame10", size: 10, color: DK2UIStyle.parchment)
                 }
-                .padding(4)
             }
-            if let index = selectedIndex, index < creatures.count {
-                Text("Selected: \(creatures[index].name)  \(creatures[index].detail ?? "")")
-                    .font(.caption).foregroundColor(.white)
-            }
-            if filtered.isEmpty {
-                Spacer()
-                Text("No creature data bundled.").foregroundColor(.gray)
-                Spacer()
+            DK2TileFlow(items: filtered, category: nil, maxRows: 2, tileWidth: 98) { item in
+                selectedIndex = item.id
+                DK2GameCommand.postCreature(index: item.id, name: item.name)
             }
         }
     }
 }
 
-// MARK: - Objectives panel (mission brief from missions.json)
+struct DK2WorkshopPanel: View {
+    private let workshopNames = [
+        "Crate Alarm", "Training Dummy", "Call To Arms", "Anvil", "Steel Bucket",
+        "Portal Gem", "Torture Wheel", "Roulette Wheel", "Spell Book", "Training Target"
+    ]
+
+    private var items: [DK2PanelItem] {
+        let available = Set(DK2PanelData.gameData?.objectNames ?? [])
+        return workshopNames.enumerated().compactMap { index, name in
+            guard available.contains(name) else { return nil }
+            return DK2PanelItem(id: index, name: name,
+                                cost: DK2PanelData.cost(for: name, section: "objects",
+                                                       keys: ["mana_value"]),
+                                detail: nil, artName: name, kind: "workshop")
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: 6) {
+            HStack {
+                DK2BitmapText(DK2L10n.shared[467], font: "Ingame14", size: 14,
+                              color: DK2UIStyle.gold)
+                Spacer()
+            }
+            DK2TileFlow(items: items, category: nil, maxRows: 2, tileWidth: 98) { _ in
+                DK2UIStyle.postFrontEndSound()
+            }
+        }
+    }
+}
 
 struct DK2ObjectivesPanel: View {
     let mission: DK2Mission?
@@ -601,33 +744,31 @@ struct DK2ObjectivesPanel: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                Text(mission?.name ?? "Mission")
-                    .font(.title2.bold())
-                    .foregroundColor(Color(red: 0.95, green: 0.82, blue: 0.55))
-                Text(objectiveText)
-                    .font(.body)
-                    .foregroundColor(.white)
-                Divider().background(Color.gray)
+                DK2BitmapText(mission?.name ?? "Mission",
+                              font: "Ingame18", size: 18, color: DK2UIStyle.gold)
+                DK2BitmapText(DK2L10n.shared[1408], font: "Ingame14", size: 14,
+                              color: DK2UIStyle.gold)
+                DK2BitmapText(objectiveText, font: "Ingame14", size: 14,
+                              color: DK2UIStyle.parchment)
+                DK2BitmapText(DK2L10n.shared[1409], font: "Ingame14", size: 14,
+                              color: DK2UIStyle.gold)
                 infoRow("Category", detail?.category ?? mission?.category ?? "skirmish")
                 if let level = detail?.campaignLevel ?? mission?.campaignLevel {
                     infoRow("Campaign level", "\(level)")
                 }
                 if let w = detail?.width ?? mission?.width,
                    let h = detail?.height ?? mission?.height {
-                    infoRow("Map size", "\(w) × \(h) tiles")
+                    infoRow("Map size", "\(w) × \(h)")
                 }
                 if let players = detail?.playerCount {
                     infoRow("Players", "\(players)")
-                }
-                if let enemies = detail?.enemyCount {
-                    infoRow("Enemy keepers (inferred)", "\(enemies)")
                 }
                 if let things = detail?.thingCount {
                     infoRow("Map objects", "\(things)")
                 }
                 if detail == nil {
-                    Text("Detailed brief unavailable — missions.json not bundled.")
-                        .font(.caption).foregroundColor(.gray)
+                    DK2BitmapText("missions.json unavailable", font: "Ingame10", size: 10,
+                                  color: .gray)
                 }
             }
             .padding()
@@ -636,17 +777,15 @@ struct DK2ObjectivesPanel: View {
 
     private var objectiveText: String {
         "Destroy the rival keepers and claim their dungeons. Protect your Dungeon Heart, "
-            + "dig out your lair, and raise an army of creatures. Enemy counts and map facts "
-            + "below are read from the recovered mission data where available."
+            + "dig out your lair, and raise an army of creatures."
     }
 
     @ViewBuilder
     private func infoRow(_ label: String, _ value: String) -> some View {
         HStack {
-            Text(label).foregroundColor(.gray)
+            DK2BitmapText(label, font: "Ingame10", size: 10, color: DK2UIStyle.parchment)
             Spacer()
-            Text(value).foregroundColor(.white)
+            DK2BitmapText(value, font: "Ingame10", size: 10, color: .white)
         }
-        .font(.system(size: 14))
     }
 }
