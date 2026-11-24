@@ -103,11 +103,12 @@ final class DK2AudioController {
         guard voices[key] == nil, buffers[key] == nil else { return }
         let url = DK2AssetLoader.root.appendingPathComponent(relativePath)
         guard FileManager.default.fileExists(atPath: url.path),
-              let file = try? AVAudioFile(forReading: url),
-              let format = file.fileFormat,
-              let buffer = AVAudioPCMBuffer(
-                  pcmFormat: format,
-                  frameCapacity: AVAudioFrameCount(file.length))
+              let file = try? AVAudioFile(forReading: url)
+        else { return }
+        let format = file.fileFormat
+        guard let buffer = AVAudioPCMBuffer(
+            pcmFormat: format,
+            frameCapacity: AVAudioFrameCount(file.length))
         else { return }
         do {
             try file.read(into: buffer)
