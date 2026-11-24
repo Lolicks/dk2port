@@ -5,6 +5,8 @@ struct DK2RootView: View {
     @State private var selectedMission: DK2Mission?
     @State private var state: NSDictionary = [:]
     @StateObject private var resources = DK2ResourceManager.shared
+    @State private var audio = DK2AudioController()
+    @State private var eventAudio: DK2EventAudioResponder?
 
     private func start(_ mission: DK2Mission) {
         selectedMission = mission
@@ -43,7 +45,13 @@ struct DK2RootView: View {
                         }
                     }
                 }
-                .onAppear { resources.initialize() }
+                .onAppear {
+                    resources.initialize()
+                    let responder = DK2EventAudioResponder(audio: audio)
+                    responder.configure()
+                    responder.install()
+                    eventAudio = responder
+                }
             }
         }
     }

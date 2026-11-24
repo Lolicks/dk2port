@@ -3,6 +3,16 @@ import MetalKit
 import SwiftUI
 import UIKit
 
+
+private struct DK2AudioFileEntry: Decodable {
+    let bank: String?
+    let wav: String?
+}
+
+private struct DK2AudioCatalog: Decodable {
+    let files: [DK2AudioFileEntry]
+}
+
 final class DK2GameViewController: UIViewController {
     private let bridge = DK2Bridge.shared()
     private let audio = DK2AudioController()
@@ -45,6 +55,7 @@ final class DK2GameViewController: UIViewController {
         if let data = DK2AssetLoader.gameData {
             bridge.loadCreatures(data.creatureNames, rooms: data.roomNames,
                                  spells: data.keeperSpellNames)
+            bridge.spawnInitialKeeper(3)
         }
 
         do {
@@ -78,16 +89,14 @@ final class DK2GameViewController: UIViewController {
         let h = world["height"] as? Int ?? 0
         audio.configure(worldWidth: w, height: h)
         audio.start()
-        var firstAudioKey: String?
-        if let manifest = DK2AssetLoader.load(DK2AudioManifest.self, "audio/manifest.json") {
-            for entry in manifest.entries.prefix(64) {
-                guard let path = entry.path, !path.isEmpty else { continue }
-                audio.preload(relativePath: path, key: entry.id)
-                if firstAudioKey == nil { firstAudioKey = entry.id }
-            }
-        }
-        if let key = firstAudioKey {
-            audio.play(key: key, atX: 0, y: 0, volume: 0.35)
+        let catalogURL = DK2AssetLoader.root.appendingPathComponent("audio/audio.json")
+        if let data = try? Data(contentsOf: catalogURL),
+           let catalog = try? JSONDecoder().decode(DK2AudioCatalog.self, from: data),
+           let track = catalog.files.first(where: {
+               ($0.bank ?? "").lowercased().contains("track") &&
+               !($0.wav ?? "").isEmpty
+           }), let path = track.wav {
+            audio.playMusic(relativePath: path, key: "music")
         }
         if w > 0 && h > 0 {
             let cx = min(w - 1, max(0, w / 2))

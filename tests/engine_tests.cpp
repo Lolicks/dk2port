@@ -537,6 +537,24 @@ int main(int argc, char** argv) {
         std::printf("save container: crc/metadata/corruption OK\n");
     }
 
+    // A fresh game must start with keeper imps so enemies and work can spawn.
+    {
+        Game fresh;
+        CHECK(fresh.load_map(bytes.data(), bytes.size(), nullptr));
+        fresh.spawn_initial_keeper(3);
+        int imps = 0;
+        for (const Creature& c : fresh.state().creatures)
+            if (c.team == 0 && c.state != CreatureState::Dead) ++imps;
+        CHECK(imps == 3);
+        fresh.step();
+        int enemies = 0;
+        for (const Creature& c : fresh.state().creatures)
+            if (c.team == 1 && c.state != CreatureState::Dead) ++enemies;
+        std::printf("startup: imps=%d enemies=%d\n", imps, enemies);
+        CHECK(enemies > 0);
+        CHECK(!fresh.state().defeat);
+    }
+
     // Grid simulation reconstructed from Ghidra FUN_00448d80.
     CHECK(GridSimulation::relax(0, 0, 4, 4, 4, 4) == 4);
     CHECK(GridSimulation::relax(0, 0, -1, 0, 0, 0) == 0);

@@ -10,6 +10,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)loadCreatures:(NSArray<NSString *> *)creatures
                 rooms:(NSArray<NSString *> *)rooms
                spells:(NSArray<NSString *> *)spells;
+- (void)spawnInitialKeeper:(int)count;
 - (int)spawnCreature:(int)species x:(int)x y:(int)y;
 - (BOOL)buildRoom:(int)type x:(int)x y:(int)y owner:(int)owner;
 - (BOOL)placeTrap:(int)index x:(int)x y:(int)y owner:(int)owner;

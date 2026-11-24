@@ -411,6 +411,7 @@ public:
                       const std::vector<std::string>& spells);
     void set_mission(const std::string& name);
     int spawn_creature(int species, int x, int y, int team = 0);
+    void spawn_initial_keeper(int count = 3);
     bool build_room(int type, int x, int y, int owner);
     bool place_trap(int index, int x, int y, int owner);
     bool place_door(int index, int x, int y, int owner);

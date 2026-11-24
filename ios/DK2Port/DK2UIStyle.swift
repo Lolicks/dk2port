@@ -8,7 +8,7 @@ enum DK2UIStyle {
     static let panelDark = Color(red: 0.12, green: 0.09, blue: 0.07)
     static let border = Color(red: 0.45, green: 0.32, blue: 0.16)
 
-    static let frontEndSound = Notification.Name("dk2.audio.front_end")
+    static let frontEndSound = DK2EventAudio.played
 
     private static let imageLock = NSLock()
     private static var imageCache: [String: UIImage] = [:]
@@ -66,7 +66,7 @@ enum DK2UIStyle {
     }
 
     static func postFrontEndSound() {
-        NotificationCenter.default.post(name: frontEndSound, object: nil)
+        DK2EventAudio.post(.ui, x: 0, y: 0)
     }
 
     fileprivate static func firstImage(_ names: [String]) -> UIImage? {

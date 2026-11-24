@@ -104,8 +104,7 @@ final class DK2AudioController {
         let url = DK2AssetLoader.root.appendingPathComponent(relativePath)
         guard FileManager.default.fileExists(atPath: url.path),
               let file = try? AVAudioFile(forReading: url),
-              let format = AVAudioFormat(standardFormatWithSampleRate: file.fileFormat.sampleRate,
-                                         channels: 2),
+              let format = file.fileFormat,
               let buffer = AVAudioPCMBuffer(
                   pcmFormat: format,
                   frameCapacity: AVAudioFrameCount(file.length))
@@ -134,6 +133,33 @@ final class DK2AudioController {
                             bus: positional ? .sfx : bus)
         buffers[key] = buffer
         start()
+    }
+
+    /// Loads and loops an original music track on the music bus.
+    func playMusic(relativePath: String, key: String) {
+        if let voice = voices[key] {
+            start()
+            if !voice.player.isPlaying { voice.player.play() }
+            return
+        }
+        let url = DK2AssetLoader.root.appendingPathComponent(relativePath)
+        guard FileManager.default.fileExists(atPath: url.path),
+              let file = try? AVAudioFile(forReading: url),
+              let buffer = AVAudioPCMBuffer(pcmFormat: file.fileFormat,
+                                            frameCapacity: AVAudioFrameCount(file.length))
+        else { return }
+        do { try file.read(into: buffer) } catch { return }
+        let player = AVAudioPlayerNode()
+        let mixer = AVAudioMixerNode()
+        engine.attach(player)
+        engine.attach(mixer)
+        engine.connect(player, to: mixer, format: file.fileFormat)
+        engine.connect(mixer, to: musicBus, format: nil)
+        voices[key] = Voice(player: player, mixer: mixer, bus: .music)
+        buffers[key] = buffer
+        start()
+        player.scheduleBuffer(buffer, at: nil, options: .loops, completionHandler: nil)
+        player.play()
     }
 
     /// Plays a sound positioned in world tile coordinates.

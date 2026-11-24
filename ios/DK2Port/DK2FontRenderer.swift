@@ -249,8 +249,9 @@ enum DK2FontRenderer {
                                                              height: CGFloat(sourceHeight)))
                 else { continue }
                 context.saveGState()
-                context.translateBy(x: CGFloat(item.x + sourceWidth), y: CGFloat(item.y))
-                context.scaleBy(x: -1, y: 1)
+                context.translateBy(x: CGFloat(item.x + sourceWidth),
+                                    y: CGFloat(item.y + sourceHeight))
+                context.scaleBy(x: -1, y: -1)
                 context.draw(crop, in: CGRect(x: 0, y: 0,
                                               width: CGFloat(sourceWidth),
                                               height: CGFloat(sourceHeight)))

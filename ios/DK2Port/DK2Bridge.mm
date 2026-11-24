@@ -62,6 +62,10 @@ static std::string stdString(NSString *s) { return s.UTF8String ?: ""; }
     _game->load_catalog(conv(creatures), conv(rooms), conv(spells));
 }
 
+- (void)spawnInitialKeeper:(int)count {
+    _game->spawn_initial_keeper(count);
+}
+
 - (int)spawnCreature:(int)species x:(int)x y:(int)y {
     return _game->spawn_creature(species, x, y);
 }

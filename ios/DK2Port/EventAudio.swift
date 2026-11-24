@@ -11,6 +11,7 @@ enum DK2GameAudioEvent: String, CaseIterable {
     case pickup
     case victory
     case defeat
+    case ui
 }
 
 /// Notification API for one-shot game sound effects.
@@ -189,6 +190,9 @@ final class DK2EventAudioResponder {
         case .defeat:
             return name.contains("defeat") || name.contains("gameover")
                 || name.contains("lost the")
+        case .ui:
+            return name.contains("button") || name.contains("click")
+                || name.contains("menu") || bank.contains("frontend")
         }
     }
 
@@ -200,6 +204,7 @@ final class DK2EventAudioResponder {
         switch event {
         case .victory: needles = ["button_big", "button big", "gemfe", "glow"]
         case .defeat: needles = ["spikes", "glow", "button"]
+        case .ui: needles = ["button_big", "button", "click"]
         default: return nil
         }
         for needle in needles {

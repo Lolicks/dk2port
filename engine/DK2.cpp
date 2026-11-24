@@ -2293,6 +2293,42 @@ void Game::apply_anger(Creature& c, float amount, int source) {
     }
 }
 
+void Game::spawn_initial_keeper(int count) {
+    if (state_.world.width <= 0 || state_.world.height <= 0) return;
+    int hx = -1, hy = -1;
+    for (int y = 0; y < state_.world.height && hx < 0; ++y)
+        for (int x = 0; x < state_.world.width; ++x) {
+            const Tile* t = state_.world.at(x, y);
+            if (t && t->terrain == uint8_t(TerrainId::DungeonHeart)) {
+                hx = x; hy = y; break;
+            }
+        }
+    if (hx < 0) {
+        hx = state_.world.width / 2;
+        hy = state_.world.height / 2;
+        if (!state_.world.walkable(hx, hy)) {
+            for (int y = 0; y < state_.world.height && hx < 0; ++y)
+                for (int x = 0; x < state_.world.width; ++x)
+                    if (state_.world.walkable(x, y)) { hx = x; hy = y; break; }
+        }
+    }
+    if (hx < 0 || hy < 0) return;
+    static const int offsets[][2] = {{0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {-1, -1}};
+    for (int n = 0; n < std::max(0, count); ++n) {
+        int x = hx, y = hy;
+        for (const auto& o : offsets) {
+            int cx = hx + o[0], cy = hy + o[1];
+            if (state_.world.walkable(cx, cy)) { x = cx; y = cy; break; }
+        }
+        int id = spawn_creature(0, x, y, 0);
+        if (id < 0) continue;
+        Creature& imp = state_.creatures.back();
+        set_job(imp, CreatureJob::Idle, state_.elapsed);
+        imp.state = CreatureState::Idle;
+    }
+    initial_enemies_spawned_ = false;
+}
+
 void Game::spawn_initial_enemies() {
     if (initial_enemies_spawned_ || state_.world.width <= 0 ||
         state_.world.height <= 0) return;
