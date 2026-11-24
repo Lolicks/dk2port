@@ -2,7 +2,7 @@
   "project": "Dungeon Keeper II — native iOS port",
   "repository": "https://github.com/Lolicks/dk2port",
   "updated": "2026-11-24",
-  "verdict": "Core hardening step 9/10: grid field initialized from terrain, construction blockers and wrap indexing fixed.",
+  "verdict": "Core hardening 10/10 complete: full state round-trips through DK2S v6 (rooms, doors, battles, worker tasks, trigger text and camera).",
   "build": {
     "last_successful_run": "https://github.com/Lolicks/dk2port/actions/runs/45244837079",
     "ipa_size_bytes": 734290169,
@@ -65,7 +65,7 @@
     {
       "name": "C++ core: fixed-step loop, A*, economy, combat, magic",
       "state": "partial",
-      "evidence": "engine/DK2.cpp; data-driven economy, rooms, traps/doors, OpenKeeper AI/battle/worker/spells/triggers, grid field + construction blocking, save v5"
+      "evidence": "engine/DK2.cpp; data-driven economy, multi-tile rooms, traps/doors, OpenKeeper AI/battle/worker/spells/triggers, grid field, DK2S v6 full-state save"
     },
     {
       "name": "Metal tile renderer + touch camera controls",

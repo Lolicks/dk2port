@@ -321,6 +321,7 @@ constexpr uint32_t kSaveMagic = 0x324b3244;  // "DK2S"
 constexpr uint32_t kSaveVersion = 4;
 constexpr uint32_t kSaveExtMagic = 0x454b3244;  // "DK2E" trailer
 constexpr uint32_t kSaveExtMagic2 = 0x464b3244;  // "DK2F" v5 extension trailer
+constexpr uint32_t kSaveExtMagic3 = 0x474b3244;  // "DK2G" v6 extension trailer
 
 // Creature flags from OpenKeeper Creature.CreatureFlag (KWD bytes).
 constexpr int kAIFlagWorker               = 0x00000001;
@@ -2679,6 +2680,40 @@ bool Game::save(const std::string& path, std::string* error) const {
         pack_extras2(c, e2);
         out.write(reinterpret_cast<const char*>(&e2), sizeof(e2));
     }
+    w32(kSaveExtMagic3);
+    w32(0x00060000U);
+    for (const Room& r : state_.rooms) {
+        wf(r.max_integrity); wf(r.trap_cooldown); wi(r.trap_charges);
+    }
+    w32(uint32_t(state_.doors.size()));
+    for (const Door& d : state_.doors) {
+        wi(d.type); wi(d.x); wi(d.y); wi(d.owner);
+        wf(d.integrity); wf(d.max_integrity);
+        wi(d.secret ? 1 : 0); wi(d.hero ? 1 : 0); wi(d.open ? 1 : 0);
+    }
+    w32(uint32_t(state_.battles.size()));
+    for (const Battle& b : state_.battles) {
+        wi(b.id); wf(b.center_x); wf(b.center_y);
+        w32(uint32_t(b.members.size()));
+        for (int id : b.members) wi(id);
+        w32(uint32_t(b.owners.size()));
+        for (int owner : b.owners) wi(owner);
+    }
+    w32(uint32_t(state_.worker_tasks.size()));
+    for (const WorkerTask& t : state_.worker_tasks) {
+        wi(int(t.type)); wi(t.x); wi(t.y); wi(t.assigned); wf(t.progress);
+    }
+    wi(state_.text_id); wi(state_.speech_id);
+    wi(state_.action_point_id);
+    wf(state_.action_point_x); wf(state_.action_point_y);
+    wi(state_.camera_path_id); wi(state_.camera_waypoint);
+    wf(state_.camera_path_timer);
+    for (uint8_t e : state_.effects) w32(e);
+    for (const Creature& c : state_.creatures) {
+        wf(c.facing); wi(c.battle_id); wf(c.battle_leave_time);
+        wi(c.worker_task_id); wi(c.worker_task_x); wi(c.worker_task_y);
+        wf(c.worker_task_progress);
+    }
     bool written = out.good();
     out.close();
     if (!written) {
@@ -2820,6 +2855,55 @@ bool Game::load(const std::string& path, std::string* error) {
         in.seekg(here);
     }
 
+    if (in.good()) {
+        uint32_t magic3 = 0, size3 = 0;
+        r32(magic3); r32(size3);
+        if (magic3 == kSaveExtMagic3 && size3 == 0x00060000U) {
+            for (Room& r : state_.rooms) { rf(r.max_integrity); rf(r.trap_cooldown); ri(r.trap_charges); }
+            uint32_t count = 0;
+            r32(count); state_.doors.clear();
+            if (count <= 65536) {
+                state_.doors.resize(count);
+                for (Door& d : state_.doors) {
+                    ri(d.type); ri(d.x); ri(d.y); ri(d.owner);
+                    rf(d.integrity); rf(d.max_integrity);
+                    ri(flag); d.secret = flag != 0;
+                    ri(flag); d.hero = flag != 0;
+                    ri(flag); d.open = flag != 0;
+                }
+            }
+            r32(count); state_.battles.clear();
+            if (count <= 65536) {
+                state_.battles.resize(count);
+                for (Battle& b : state_.battles) {
+                    ri(b.id); rf(b.center_x); rf(b.center_y);
+                    uint32_t inner = 0;
+                    r32(inner); b.members.clear();
+                    if (inner <= 100000) for (uint32_t i = 0; i < inner; ++i) { ri(flag); b.members.push_back(flag); }
+                    r32(inner); b.owners.clear();
+                    if (inner <= 100000) for (uint32_t i = 0; i < inner; ++i) { ri(flag); b.owners.push_back(flag); }
+                }
+            }
+            r32(count); state_.worker_tasks.clear();
+            if (count <= 100000) {
+                state_.worker_tasks.resize(count);
+                for (WorkerTask& t : state_.worker_tasks) {
+                    ri(flag); t.type = static_cast<WorkerTaskType>(flag);
+                    ri(t.x); ri(t.y); ri(t.assigned); rf(t.progress);
+                }
+            }
+            ri(state_.text_id); ri(state_.speech_id); ri(state_.action_point_id);
+            rf(state_.action_point_x); rf(state_.action_point_y);
+            ri(state_.camera_path_id); ri(state_.camera_waypoint);
+            rf(state_.camera_path_timer);
+            for (uint8_t& e : state_.effects) { uint32_t x; r32(x); e = uint8_t(x); }
+            for (Creature& c : state_.creatures) {
+                rf(c.facing); ri(c.battle_id); rf(c.battle_leave_time);
+                ri(c.worker_task_id); ri(c.worker_task_x); ri(c.worker_task_y);
+                rf(c.worker_task_progress);
+            }
+        }
+    }
     state_.economy.recalculate(state_.world);
     next_creature_id_ = 1;
     for (const Creature& c : state_.creatures)

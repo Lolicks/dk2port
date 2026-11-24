@@ -276,6 +276,16 @@ int main(int argc, char** argv) {
     }
 
     game.set_mission("level1");
+    game.state().text_id = 777;
+    game.state().camera_path_id = 9;
+    game.state().camera_waypoint = 3;
+    game.state().effects[5] = 1;
+    if (!game.state().rooms.empty()) game.state().rooms[0].max_integrity = 1234.0f;
+    if (!game.state().creatures.empty()) {
+        game.state().creatures[0].facing = 1.25f;
+        game.state().creatures[0].worker_task_id = 1;
+        game.state().creatures[0].worker_task_x = 7;
+    }
     const std::string save_path = "/tmp/dk2_engine_test.sav";
     CHECK(game.save(save_path));
     Game restored;
@@ -287,6 +297,17 @@ int main(int argc, char** argv) {
     CHECK(restored.state().spells_known == game.state().spells_known);
     CHECK(restored.state().mission_name == "level1");
     CHECK(restored.state().creatures[0].job == game.state().creatures[0].job);
+    CHECK(restored.state().text_id == 777);
+    CHECK(restored.state().camera_path_id == 9);
+    CHECK(restored.state().camera_waypoint == 3);
+    CHECK(restored.state().effects[5] == 1);
+    if (!game.state().rooms.empty())
+        CHECK(std::fabs(restored.state().rooms[0].max_integrity - 1234.0f) < 0.01f);
+    if (!game.state().creatures.empty()) {
+        CHECK(std::fabs(restored.state().creatures[0].facing - 1.25f) < 0.001f);
+        CHECK(restored.state().creatures[0].worker_task_id == 1);
+        CHECK(restored.state().creatures[0].worker_task_x == 7);
+    }
     std::remove(save_path.c_str());
 
     game.on_pan(10.f, -5.f);
