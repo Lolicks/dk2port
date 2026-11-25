@@ -15,7 +15,7 @@ private struct DK2AudioCatalog: Decodable {
 
 final class DK2GameViewController: UIViewController {
     private let bridge = DK2Bridge.shared()
-    private let audio = DK2AudioController()
+    private let audio = DK2SimpleAudio()
     private var renderer: DK2MetalRenderer?
     private var displayLink: CADisplayLink?
     private var accumulator: TimeInterval = 0

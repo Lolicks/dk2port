@@ -78,12 +78,12 @@ private struct DK2SoundCatalog: Decodable {
 
 /// Loads matched manifest samples once and plays them on the audio controller.
 final class DK2EventAudioResponder {
-    private let audio: DK2AudioController
+    private let audio: DK2SimpleAudio
     private var keys: [DK2GameAudioEvent: [String]] = [:]
     private var cursors: [DK2GameAudioEvent: Int] = [:]
     private var installed = false
 
-    init(audio: DK2AudioController) {
+    init(audio: DK2SimpleAudio) {
         self.audio = audio
     }
 
@@ -220,7 +220,7 @@ final class DK2EventAudioResponder {
 
 /// Menu-only audio owner. Created after resources are ready, never at app init.
 final class DK2MenuAudio {
-    private let audio = DK2AudioController()
+    private let audio = DK2SimpleAudio()
     private let responder: DK2EventAudioResponder
 
     init() {
