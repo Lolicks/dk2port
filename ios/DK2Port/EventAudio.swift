@@ -237,7 +237,7 @@ final class DK2MenuAudio {
         let preferred = entries.first { entry in
             (entry.bank ?? "").lowercased().contains("track") &&
             !(entry.wav ?? "").isEmpty
-        } ?? entries.first { !(entry.wav ?? "").isEmpty }
+        } ?? entries.first { !($0.wav ?? "").isEmpty }
         guard let path = preferred?.soundPath else { return }
         audio.playMusic(relativePath: path, key: "menu-music")
     }
