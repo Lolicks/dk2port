@@ -1,7 +1,7 @@
 # DK2Port — STATUS (auto-generated)
 
 **Updated:** 2026-11-24  
-**Verdict:** Orientation, menu music, button SFX and level-start crash fix shipped. Text now uses UIKit glyph compositing; audio uses stable mixer graph without AVAudioEnvironmentNode.
+**Verdict:** Stability fix: AVAudioEngine fully removed; all audio runs through AVAudioPlayer. Fresh IPA built to stop launch and level-start crashes.
 
 ## Build & distribution
 
