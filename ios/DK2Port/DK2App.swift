@@ -5,6 +5,7 @@ struct DK2RootView: View {
     @State private var selectedMission: DK2Mission?
     @State private var state: NSDictionary = [:]
     @StateObject private var resources = DK2ResourceManager.shared
+    @State private var menuAudio: DK2MenuAudio?
 
     private func start(_ mission: DK2Mission) {
         selectedMission = mission
@@ -43,7 +44,14 @@ struct DK2RootView: View {
                         }
                     }
                 }
-                .onAppear { resources.initialize() }
+                .onAppear {
+                    resources.initialize()
+                    if menuAudio == nil {
+                        let audio = DK2MenuAudio()
+                        audio.startMusic()
+                        menuAudio = audio
+                    }
+                }
             }
         }
     }

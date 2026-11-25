@@ -20,7 +20,6 @@ final class DK2AudioController {
     private let musicBus = AVAudioMixerNode()
     private let sfxBus = AVAudioMixerNode()
     private let speechBus = AVAudioMixerNode()
-    private let environment = AVAudioEnvironmentNode()
     private var voices: [String: Voice] = [:]
     private var buffers: [String: AVAudioPCMBuffer] = [:]
     private var listenerX: Float = 0
@@ -34,15 +33,11 @@ final class DK2AudioController {
         engine.attach(musicBus)
         engine.attach(sfxBus)
         engine.attach(speechBus)
-        engine.attach(environment)
-
         engine.connect(musicBus, to: masterBus, format: nil)
         engine.connect(speechBus, to: masterBus, format: nil)
         engine.connect(sfxBus, to: masterBus, format: nil)
-        engine.connect(environment, to: sfxBus, format: environment.outputFormat(forBus: 0))
         engine.connect(masterBus, to: engine.mainMixerNode, format: nil)
 
-        environment.distanceAttenuationParameters.rolloffFactor = 1
         applyVolumes()
 
         NotificationCenter.default.addObserver(
@@ -95,7 +90,6 @@ final class DK2AudioController {
         listenerY = y
         listenerVX = vx
         listenerVY = vy
-        environment.listenerPosition = AVAudio3DPoint(x: x, y: 0, z: -y)
     }
 
     /// Loads one decoded sample from the imported bundle onto a bus.
@@ -119,19 +113,14 @@ final class DK2AudioController {
         engine.attach(player)
         engine.attach(mixer)
         engine.connect(player, to: mixer, format: format)
-        if positional {
-            engine.connect(mixer, to: environment, format: nil)
-        } else {
-            let target: AVAudioMixerNode
-            switch bus {
-            case .music: target = musicBus
-            case .speech: target = speechBus
-            case .master, .sfx: target = sfxBus
-            }
-            engine.connect(mixer, to: target, format: nil)
+        let target: AVAudioMixerNode
+        switch bus {
+        case .music: target = musicBus
+        case .speech: target = speechBus
+        case .master, .sfx: target = sfxBus
         }
-        voices[key] = Voice(player: player, mixer: mixer,
-                            bus: positional ? .sfx : bus)
+        engine.connect(mixer, to: target, format: nil)
+        voices[key] = Voice(player: player, mixer: mixer, bus: bus)
         buffers[key] = buffer
         start()
     }
@@ -176,16 +165,11 @@ final class DK2AudioController {
         let reference = Swift.max(4.0, worldSize * 0.15)
         let attenuation = 1.0 / (1.0 + distance / reference)
 
-        if positional {
-            voice.player.position = AVAudio3DPoint(x: x, y: 0, z: -y)
-            voice.mixer.volume = min(1.0, Swift.max(0.0, volume * attenuation))
-        } else {
-            let pan = min(1.0, Swift.max(-1.0, dx / reference))
-            voice.mixer.pan = pan
-            let theta = (pan + 1.0) * Float.pi / 4.0
-            let equalPower = (cosf(theta) + sinf(theta)) / sqrtf(2.0)
-            voice.mixer.volume = min(1.0, Swift.max(0.0, volume * attenuation * equalPower))
-        }
+        let pan = min(1.0, Swift.max(-1.0, dx / reference))
+        voice.mixer.pan = pan
+        let theta = (pan + 1.0) * Float.pi / 4.0
+        let equalPower = (cosf(theta) + sinf(theta)) / sqrtf(2.0)
+        voice.mixer.volume = min(1.0, Swift.max(0.0, volume * attenuation * equalPower))
         voice.player.scheduleBuffer(buffer, at: nil, options: [], completionHandler: nil)
         if !voice.player.isPlaying { voice.player.play() }
     }

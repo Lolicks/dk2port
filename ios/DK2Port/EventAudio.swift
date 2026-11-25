@@ -217,3 +217,28 @@ final class DK2EventAudioResponder {
         return nil
     }
 }
+
+/// Menu-only audio owner. Created after resources are ready, never at app init.
+final class DK2MenuAudio {
+    private let audio = DK2AudioController()
+    private let responder: DK2EventAudioResponder
+
+    init() {
+        responder = DK2EventAudioResponder(audio: audio)
+        responder.configure()
+        responder.install()
+    }
+
+    func startMusic() {
+        let url = DK2AssetLoader.root.appendingPathComponent("audio/audio.json")
+        guard let data = try? Data(contentsOf: url),
+              let catalog = try? JSONDecoder().decode(DK2SoundCatalog.self, from: data) else { return }
+        let entries = catalog.all
+        let preferred = entries.first { entry in
+            (entry.bank ?? "").lowercased().contains("track") &&
+            !(entry.wav ?? "").isEmpty
+        } ?? entries.first { !(entry.wav ?? "").isEmpty }
+        guard let path = preferred?.soundPath else { return }
+        audio.playMusic(relativePath: path, key: "menu-music")
+    }
+}
