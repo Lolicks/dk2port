@@ -111,14 +111,15 @@ final class DK2GameViewController: UIViewController {
         audio.start()
         let catalogURL = DK2AssetLoader.root.appendingPathComponent("audio/audio.json")
         if let data = try? Data(contentsOf: catalogURL),
-           let catalog = try? JSONDecoder().decode(DK2AudioCatalog.self, from: data),
-           let tracks = catalog.files.filter {
-               ($0.bank ?? "").lowercased().contains("track") &&
-               !($0.wav ?? "").isEmpty
-           },
-           let track = tracks.max(by: { ($0.bytes ?? 0) < ($1.bytes ?? 0) }),
-           let path = track.wav {
-            audio.playMusic(relativePath: path, key: "music")
+           let catalog = try? JSONDecoder().decode(DK2AudioCatalog.self, from: data) {
+            let tracks = catalog.files.filter {
+                ($0.bank ?? "").lowercased().contains("track") &&
+                !($0.wav ?? "").isEmpty
+            }
+            if let track = tracks.max(by: { ($0.bytes ?? 0) < ($1.bytes ?? 0) }),
+               let path = track.wav {
+                audio.playMusic(relativePath: path, key: "music")
+            }
         }
         if w > 0 && h > 0 {
             let cx = min(w - 1, max(0, w / 2))
