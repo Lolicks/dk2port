@@ -1,7 +1,7 @@
 # DK2Port — STATUS (auto-generated)
 
 **Updated:** 2026-11-24  
-**Verdict:** Crash-on-launch fix shipped: AVAudioEngine no longer created at app start; keeper imps spawn only after the map is loaded. Fresh verified IPA published.
+**Verdict:** Orientation, menu music, button SFX and level-start crash fix shipped. Text now uses UIKit glyph compositing; audio uses stable mixer graph without AVAudioEnvironmentNode.
 
 ## Build & distribution
 

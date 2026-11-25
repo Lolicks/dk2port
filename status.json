@@ -2,10 +2,10 @@
   "project": "Dungeon Keeper II — native iOS port",
   "repository": "https://github.com/Lolicks/dk2port",
   "updated": "2026-11-24",
-  "verdict": "Crash-on-launch fix shipped: AVAudioEngine no longer created at app start; keeper imps spawn only after the map is loaded. Fresh verified IPA published.",
+  "verdict": "Orientation, menu music, button SFX and level-start crash fix shipped. Text now uses UIKit glyph compositing; audio uses stable mixer graph without AVAudioEnvironmentNode.",
   "build": {
-    "last_successful_run": "https://github.com/Lolicks/dk2port/actions/runs/45514579417",
-    "ipa_size_bytes": 784630674,
+    "last_successful_run": "https://github.com/Lolicks/dk2port/actions/runs/45522311593",
+    "ipa_size_bytes": 784630514,
     "release": "https://github.com/Lolicks/dk2port/releases/latest",
     "artifact": "DK2Port-IPA",
     "signed": false,
