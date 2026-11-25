@@ -1,7 +1,7 @@
 # DK2Port — STATUS (auto-generated)
 
 **Updated:** 2026-11-24  
-**Verdict:** UI fixes shipped: 180-degree text orientation corrected, startup keeper imps added, original music/SFX wiring fixed, home-screen icon installed. Fresh IPA built and verified.
+**Verdict:** Crash-on-launch fix shipped: AVAudioEngine no longer created at app start; keeper imps spawn only after the map is loaded. Fresh verified IPA published.
 
 ## Build & distribution
 
