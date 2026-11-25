@@ -1,4 +1,5 @@
 import SwiftUI
+import Foundation
 
 struct DK2RootView: View {
     @State private var selected: DK2MapEntry?
@@ -44,13 +45,12 @@ struct DK2RootView: View {
                         }
                     }
                 }
-                .onAppear {
-                    resources.initialize()
-                    if menuAudio == nil {
-                        let audio = DK2MenuAudio()
-                        audio.startMusic()
-                        menuAudio = audio
-                    }
+                .onAppear { resources.initialize() }
+                .onChange(of: resources.ready) { ready in
+                    guard ready, menuAudio == nil else { return }
+                    let audio = DK2MenuAudio()
+                    audio.startMusic()
+                    menuAudio = audio
                 }
             }
         }
@@ -59,6 +59,15 @@ struct DK2RootView: View {
 
 @main
 struct DK2App: App {
+    init() {
+        NSSetUncaughtExceptionHandler { exception in
+            let text = "CRASH \(exception.name.rawValue): \(exception.reason ?? "")"
+            let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("dk2_crash.log")
+            try? text.write(to: url, atomically: true, encoding: .utf8)
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             DK2RootView()

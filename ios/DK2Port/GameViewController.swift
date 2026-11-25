@@ -7,6 +7,7 @@ import UIKit
 private struct DK2AudioFileEntry: Decodable {
     let bank: String?
     let wav: String?
+    let bytes: Int?
 }
 
 private struct DK2AudioCatalog: Decodable {
@@ -60,7 +61,9 @@ final class DK2GameViewController: UIViewController {
         do {
             try load(mission)
             bridge.spawnInitialKeeper(3)
+            debugLog("LOAD imps ok")
         } catch {
+            debugLog("LOAD FAILED \(error.localizedDescription)")
             let label = UILabel(frame: view.bounds)
             label.text = "Failed to load \(mission.name): \(error.localizedDescription)"
             label.textColor = .white
@@ -82,8 +85,25 @@ final class DK2GameViewController: UIViewController {
         displayLink?.add(to: .main, forMode: .common)
     }
 
+    private func debugLog(_ message: String) {
+        let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("dk2_level.log")
+        let line = message + "\n"
+        if let handle = try? FileHandle(forWritingTo: url) {
+            handle.seekToEndOfFile()
+            handle.write(Data(line.utf8))
+            try? handle.close()
+        } else {
+            try? line.write(to: url, atomically: true, encoding: .utf8)
+        }
+    }
+
     private func load(_ entry: DK2MapEntry) throws {
-        try bridge.loadMap(atPath: DK2AssetLoader.mapURL(entry).path)
+        debugLog("LOAD start \(entry.name) \(entry.file)")
+        let mapURL = DK2AssetLoader.mapURL(entry)
+        debugLog("MAP \(mapURL.path) exists=\(FileManager.default.fileExists(atPath: mapURL.path))")
+        try bridge.loadMap(atPath: mapURL.path)
+        debugLog("LOAD map ok")
         let world = bridge.snapshot
         let w = world["width"] as? Int ?? 0
         let h = world["height"] as? Int ?? 0
@@ -92,10 +112,12 @@ final class DK2GameViewController: UIViewController {
         let catalogURL = DK2AssetLoader.root.appendingPathComponent("audio/audio.json")
         if let data = try? Data(contentsOf: catalogURL),
            let catalog = try? JSONDecoder().decode(DK2AudioCatalog.self, from: data),
-           let track = catalog.files.first(where: {
+           let tracks = catalog.files.filter {
                ($0.bank ?? "").lowercased().contains("track") &&
                !($0.wav ?? "").isEmpty
-           }), let path = track.wav {
+           },
+           let track = tracks.max(by: { ($0.bytes ?? 0) < ($1.bytes ?? 0) }),
+           let path = track.wav {
             audio.playMusic(relativePath: path, key: "music")
         }
         if w > 0 && h > 0 {

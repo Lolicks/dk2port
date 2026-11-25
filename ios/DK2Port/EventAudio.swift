@@ -50,9 +50,10 @@ private struct DK2SoundEntry: Decodable {
     let path: String?
     let wav: String?
     let wavSource: String?
+    let bytes: Int?
 
     enum CodingKeys: String, CodingKey {
-        case id, bank, index, name, path, wav
+        case id, bank, index, name, path, wav, bytes
         case wavSource = "wav_source"
     }
 
@@ -234,10 +235,12 @@ final class DK2MenuAudio {
         guard let data = try? Data(contentsOf: url),
               let catalog = try? JSONDecoder().decode(DK2SoundCatalog.self, from: data) else { return }
         let entries = catalog.all
-        let preferred = entries.first { entry in
-            (entry.bank ?? "").lowercased().contains("track") &&
-            !(entry.wav ?? "").isEmpty
-        } ?? entries.first { !($0.wav ?? "").isEmpty }
+        let tracks = entries.filter {
+            ($0.bank ?? "").lowercased().contains("track") &&
+            !($0.soundPath ?? "").isEmpty
+        }
+        let preferred = tracks.max { ($0.bytes ?? 0) < ($1.bytes ?? 0) }
+            ?? entries.first { !($0.soundPath ?? "").isEmpty }
         guard let path = preferred?.soundPath else { return }
         audio.playMusic(relativePath: path, key: "menu-music")
     }
