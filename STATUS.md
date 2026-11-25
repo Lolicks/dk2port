@@ -1,7 +1,7 @@
 # DK2Port — STATUS (auto-generated)
 
 **Updated:** 2026-11-24  
-**Verdict:** Stability fix: AVAudioEngine fully removed; all audio runs through AVAudioPlayer. Fresh IPA built to stop launch and level-start crashes.
+**Verdict:** Menu music now starts when resources are ready; longest original music track selected; level-load diagnostics added to Documents/dk2_level.log.
 
 ## Build & distribution
 

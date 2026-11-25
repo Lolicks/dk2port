@@ -2,10 +2,10 @@
   "project": "Dungeon Keeper II — native iOS port",
   "repository": "https://github.com/Lolicks/dk2port",
   "updated": "2026-11-24",
-  "verdict": "Stability fix: AVAudioEngine fully removed; all audio runs through AVAudioPlayer. Fresh IPA built to stop launch and level-start crashes.",
+  "verdict": "Menu music now starts when resources are ready; longest original music track selected; level-load diagnostics added to Documents/dk2_level.log.",
   "build": {
-    "last_successful_run": "https://github.com/Lolicks/dk2port/actions/runs/45530192459",
-    "ipa_size_bytes": 784629227,
+    "last_successful_run": "https://github.com/Lolicks/dk2port/actions/runs/45537316066",
+    "ipa_size_bytes": 784636609,
     "release": "https://github.com/Lolicks/dk2port/releases/latest",
     "artifact": "DK2Port-IPA",
     "signed": false,
